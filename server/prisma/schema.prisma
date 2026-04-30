@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId        Int                @id @default(autoincrement()) @map("UserID")
+  name          String             @map("Name") @db.Text
+  email         String             @unique @map("Email") @db.Text
+  passwordHash  String             @map("PasswordHash") @db.Text
+  registerDate  DateTime?          @default(now()) @map("RegisterDate") @db.Date
+  playlists     Playlist[]
+  subscriptions UserSubscription[]
+
+  @@map("Users")
+}
+
+model Trainer {
+  trainerId   Int       @id @default(autoincrement()) @map("TrainerID")
+  trainerName String    @map("TrainerName") @db.Text
+  bio         String?   @map("Bio") @db.Text
+  startDate   DateTime? @map("StartDate") @db.Date
+  videos      Video[]
+
+  @@map("Trainers")
+}
+
+model Category {
+  categoryId   Int     @id @default(autoincrement()) @map("CategoryID")
+  categoryName String  @map("CategoryName") @db.Text
+  videos       Video[]
+
+  @@map("Categories")
+}
+
+model SubscriptionPlan {
+  planId         Int                @id @default(autoincrement()) @map("PlanID")
+  planName       String             @map("PlanName") @db.Text
+  price          Decimal            @map("Price") @db.Decimal(10, 2)
+  durationMonths Int                @map("DurationMonths")
+  subscriptions  UserSubscription[]
+
+  @@map("SubscriptionPlans")
+}
+
+model Video {
+  videoId           Int             @id @default(autoincrement()) @map("VideoID")
+  duration          Int?            @map("Duration")
+  title             String          @map("Title") @db.Text
+  videoURL          String?         @map("VideoURL") @db.Text
+  language          String?         @map("Language") @db.Text
+  equipment         String?         @map("Equipment") @db.Text
+  shortDescription  String?         @map("ShortDescription") @db.Text
+  trainerId         Int?            @map("TrainerID")
+  categoryId        Int?            @map("CategoryID")
+  trainer           Trainer?        @relation(fields: [trainerId], references: [trainerId], onDelete: SetNull, map: "fk_video_trainer")
+  category          Category?       @relation(fields: [categoryId], references: [categoryId], onDelete: SetNull, map: "fk_video_category")
+  playlistVideos    PlaylistVideo[]
+
+  @@map("Videos")
+}
+
+model UserSubscription {
+  userSubscriptionId Int               @id @default(autoincrement()) @map("UserSubscriptionID")
+  startDate          DateTime?         @default(now()) @map("StartDate") @db.Date
+  userId             Int?              @map("UserID")
+  planId             Int?              @map("PlanID")
+  user               User?             @relation(fields: [userId], references: [userId], onDelete: Cascade, map: "fk_user_sub")
+  plan               SubscriptionPlan? @relation(fields: [planId], references: [planId], onDelete: Cascade, map: "fk_plan")
+
+  @@map("UserSubscriptions")
+}
+
+model Playlist {
+  playlistId      Int             @id @default(autoincrement()) @map("PlaylistID")
+  playlistName    String          @map("PlaylistName") @db.Text
+  userId          Int?            @map("UserID")
+  user            User?           @relation(fields: [userId], references: [userId], onDelete: Cascade, map: "fk_playlist_user")
+  playlistVideos  PlaylistVideo[]
+
+  @@map("Playlists")
+}
+
+model PlaylistVideo {
+  playlistVideoId Int       @id @default(autoincrement()) @map("PlaylistVideoID")
+  playlistId      Int?      @map("PlaylistID")
+  videoId         Int?      @map("VideoID")
+  playlist        Playlist? @relation(fields: [playlistId], references: [playlistId], onDelete: Cascade, map: "fk_playlistvideos_playlist")
+  video           Video?    @relation(fields: [videoId], references: [videoId], onDelete: Cascade, map: "fk_playlistvideos_video")
+
+  @@map("PlaylistVideos")
+}
