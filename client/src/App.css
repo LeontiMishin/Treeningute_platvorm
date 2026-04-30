@@ -1,0 +1,913 @@
+:root {
+  color: #16211c;
+  background: #f5f1e8;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(119, 210, 167, 0.22), transparent 26rem),
+    radial-gradient(circle at 85% 2%, rgba(235, 104, 83, 0.2), transparent 24rem),
+    #f5f1e8;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.site-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0;
+  backdrop-filter: blur(18px);
+}
+
+.brand,
+.nav-links,
+.hero-actions,
+.hero-stats,
+.preview-footer,
+.member-band {
+  display: flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.brand-mark {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fffaf0;
+  background: #16211c;
+}
+
+.nav-links {
+  gap: 28px;
+  color: #59635d;
+  font-size: 0.95rem;
+}
+
+.nav-links a:hover {
+  color: #16211c;
+}
+
+.ghost-button,
+.header-profile-button,
+.primary-button,
+.secondary-button,
+.auth-form button,
+.profile-card button,
+.upload-button,
+.avatar-actions button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-weight: 800;
+}
+
+.ghost-button {
+  border: 1px solid rgba(22, 33, 28, 0.18);
+  background: rgba(255, 250, 240, 0.68);
+}
+
+.header-profile-button {
+  gap: 10px;
+  border: 1px solid rgba(22, 33, 28, 0.18);
+  padding: 4px 14px 4px 5px;
+  color: #16211c;
+  background: rgba(255, 250, 240, 0.82);
+  box-shadow: 0 12px 24px rgba(41, 45, 40, 0.08);
+}
+
+.header-avatar {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: #16211c;
+  background: #b7f26b;
+  font-size: 0.95rem;
+  font-weight: 950;
+}
+
+.header-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.primary-button,
+.auth-form button,
+.profile-card button,
+.avatar-actions button {
+  color: #fffaf0;
+  background: #eb684e;
+  box-shadow: 0 16px 30px rgba(235, 104, 78, 0.24);
+}
+
+.secondary-button {
+  color: #16211c;
+  background: #b7f26b;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(330px, 0.96fr);
+  gap: 48px;
+  align-items: center;
+  min-height: calc(100vh - 82px);
+  padding: 52px 0 74px;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: #eb684e;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  max-width: 720px;
+  margin-bottom: 24px;
+  font-size: clamp(3.2rem, 7vw, 6.6rem);
+  line-height: 0.9;
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.hero-copy p,
+.pricing-copy p,
+.member-band p {
+  max-width: 620px;
+  color: #59635d;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.hero-actions {
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 34px 0;
+}
+
+.text-link {
+  color: #16211c;
+  font-weight: 800;
+  border-bottom: 2px solid #b7f26b;
+}
+
+.hero-stats {
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.hero-stats span {
+  display: grid;
+  min-width: 112px;
+  padding: 14px 18px;
+  border: 1px solid rgba(22, 33, 28, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 250, 240, 0.68);
+  color: #59635d;
+}
+
+.hero-stats strong {
+  color: #16211c;
+  font-size: 1.55rem;
+}
+
+.training-preview {
+  overflow: hidden;
+  border: 1px solid rgba(22, 33, 28, 0.16);
+  border-radius: 28px;
+  background: #fffaf0;
+  box-shadow: 0 34px 70px rgba(41, 45, 40, 0.14);
+}
+
+.preview-screen {
+  position: relative;
+  min-height: 560px;
+  background:
+    linear-gradient(145deg, rgba(22, 33, 28, 0.02), rgba(22, 33, 28, 0.68)),
+    url("https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1200&q=80");
+  background-position: center;
+  background-size: cover;
+}
+
+.play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: rgba(255, 250, 240, 0.92);
+  transform: translate(-50%, -50%);
+}
+
+.play-button::after {
+  position: absolute;
+  top: 25px;
+  left: 31px;
+  width: 0;
+  height: 0;
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-left: 20px solid #eb684e;
+  content: "";
+}
+
+.class-chip,
+.coach-card {
+  position: absolute;
+  border-radius: 18px;
+  background: rgba(255, 250, 240, 0.9);
+}
+
+.class-chip {
+  top: 24px;
+  right: 24px;
+  padding: 10px 16px;
+  font-weight: 900;
+}
+
+.coach-card {
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  display: grid;
+  gap: 4px;
+  padding: 20px;
+}
+
+.coach-card span,
+.coach-card small,
+.preview-footer span,
+.price-card span {
+  color: #59635d;
+}
+
+.coach-card strong {
+  font-size: 1.4rem;
+}
+
+.preview-footer {
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px;
+}
+
+.section {
+  padding: 92px 0;
+}
+
+.intro-section,
+.pricing-section {
+  display: grid;
+  grid-template-columns: 0.84fr 1.16fr;
+  gap: 44px;
+  align-items: start;
+}
+
+h2 {
+  max-width: 680px;
+  margin-bottom: 18px;
+  font-size: clamp(2.1rem, 4vw, 4rem);
+  line-height: 1;
+  font-weight: 950;
+}
+
+.benefit-grid,
+.workout-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.benefit-card {
+  display: flex;
+  gap: 14px;
+  min-height: 112px;
+  padding: 22px;
+  border: 1px solid rgba(22, 33, 28, 0.12);
+  border-radius: 20px;
+  background: #fffaf0;
+}
+
+.benefit-card span {
+  display: grid;
+  flex: 0 0 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: #b7f26b;
+  font-weight: 900;
+}
+
+.benefit-card p {
+  margin-bottom: 0;
+  font-weight: 750;
+}
+
+.section-heading {
+  margin-bottom: 28px;
+}
+
+.workout-card {
+  display: flex;
+  min-height: 250px;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 24px;
+  padding: 24px;
+  color: #fffaf0;
+}
+
+.workout-card span {
+  opacity: 0.78;
+  font-weight: 800;
+}
+
+.workout-card h3 {
+  margin-top: 8px;
+  font-size: 2rem;
+}
+
+.workout-card p {
+  margin-bottom: 0;
+  font-weight: 900;
+}
+
+.trainers-section {
+  padding-top: 28px;
+}
+
+.trainers-heading {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 0.58fr);
+  gap: 30px;
+  align-items: end;
+}
+
+.trainers-heading p {
+  margin-bottom: 20px;
+  color: #59635d;
+  line-height: 1.7;
+}
+
+.trainer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.trainer-card {
+  display: grid;
+  gap: 22px;
+  min-height: 360px;
+  align-content: space-between;
+  border: 1px solid rgba(22, 33, 28, 0.12);
+  border-radius: 24px;
+  padding: 24px;
+  background: #fffaf0;
+  box-shadow: 0 18px 40px rgba(41, 45, 40, 0.08);
+}
+
+.trainer-avatar {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  place-items: center;
+  border-radius: 28px;
+  color: #16211c;
+  font-size: 1.45rem;
+  font-weight: 950;
+}
+
+.trainer-avatar.mint {
+  background: #b7f26b;
+}
+
+.trainer-avatar.coral {
+  color: #fffaf0;
+  background: #eb684e;
+}
+
+.trainer-avatar.blue {
+  color: #fffaf0;
+  background: #235b68;
+}
+
+.trainer-card span {
+  color: #eb684e;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.trainer-card h3 {
+  margin: 8px 0 12px;
+  font-size: 1.75rem;
+}
+
+.trainer-card p {
+  margin-bottom: 0;
+  color: #59635d;
+  line-height: 1.65;
+}
+
+.trainer-card a {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 18px;
+  color: #16211c;
+  background: rgba(183, 242, 107, 0.5);
+  font-weight: 900;
+}
+
+.coral {
+  background: #eb684e;
+}
+
+.lime {
+  color: #16211c;
+  background: #b7f26b;
+}
+
+.blue {
+  background: #235b68;
+}
+
+.violet {
+  background: #6b5b95;
+}
+
+.member-band {
+  justify-content: space-between;
+  gap: 32px;
+  margin: 30px 0;
+  padding: 42px;
+  border-radius: 28px;
+  background: #16211c;
+  color: #fffaf0;
+}
+
+.member-band p {
+  margin-bottom: 0;
+  color: rgba(255, 250, 240, 0.74);
+}
+
+.price-card {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+  border-radius: 28px;
+  padding: 34px;
+  background: #fffaf0;
+  box-shadow: 0 24px 54px rgba(41, 45, 40, 0.12);
+}
+
+.price-card strong {
+  font-size: clamp(3rem, 7vw, 5.8rem);
+  line-height: 1;
+}
+
+.price-card p {
+  color: #59635d;
+}
+
+.price-card .primary-button {
+  width: 100%;
+}
+
+.price-card .primary-button:disabled {
+  opacity: 0.72;
+}
+
+.purchase-message {
+  color: #59635d;
+  line-height: 1.5;
+}
+
+.auth-section {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 32px;
+  align-items: start;
+  padding: 70px 0 56px;
+  border-top: 1px solid rgba(22, 33, 28, 0.14);
+}
+
+.auth-copy p {
+  max-width: 560px;
+  color: #59635d;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.auth-panel {
+  display: grid;
+  gap: 18px;
+  border-radius: 28px;
+  padding: 30px;
+  background: #fffaf0;
+  box-shadow: 0 24px 54px rgba(41, 45, 40, 0.12);
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(22, 33, 28, 0.08);
+}
+
+.auth-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  color: #59635d;
+  background: transparent;
+  font-weight: 800;
+}
+
+.auth-tabs button.active {
+  color: #fffaf0;
+  background: #16211c;
+}
+
+.auth-form,
+.profile-card {
+  display: grid;
+  gap: 16px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 8px;
+  color: #59635d;
+  font-weight: 800;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(22, 33, 28, 0.14);
+  border-radius: 16px;
+  padding: 0 18px;
+  color: #16211c;
+  background: #f5f1e8;
+  outline: none;
+}
+
+.auth-form input:focus {
+  border-color: #eb684e;
+}
+
+.auth-form button,
+.profile-card button {
+  width: 100%;
+  color: #fffaf0;
+  background: #eb684e;
+}
+
+.auth-form button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.profile-card h3 {
+  margin-bottom: 0;
+  font-size: 2rem;
+}
+
+.profile-card p,
+.auth-message {
+  margin-bottom: 0;
+  color: #59635d;
+}
+
+.status-pill {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #16211c;
+  background: #b7f26b;
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.profile-section {
+  padding: 86px 0 68px;
+  border-top: 1px solid rgba(22, 33, 28, 0.14);
+}
+
+.profile-heading {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 0.55fr);
+  gap: 32px;
+  align-items: end;
+  margin-bottom: 30px;
+}
+
+.profile-heading p {
+  margin-bottom: 22px;
+  color: #59635d;
+  line-height: 1.7;
+}
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 20px;
+}
+
+.profile-main,
+.subscriptions-card,
+.profile-locked {
+  border: 1px solid rgba(22, 33, 28, 0.12);
+  border-radius: 28px;
+  padding: 30px;
+  background: #fffaf0;
+  box-shadow: 0 24px 54px rgba(41, 45, 40, 0.1);
+}
+
+.profile-main {
+  display: grid;
+  gap: 28px;
+}
+
+.avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.profile-avatar {
+  display: grid;
+  width: 132px;
+  height: 132px;
+  flex: 0 0 132px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 34px;
+  color: #16211c;
+  background: #b7f26b;
+  font-size: 3rem;
+  font-weight: 950;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.upload-button {
+  cursor: pointer;
+  color: #16211c;
+  background: #b7f26b;
+}
+
+.upload-button input {
+  display: none;
+}
+
+.avatar-actions button {
+  width: auto;
+}
+
+.info-list {
+  display: grid;
+  gap: 12px;
+}
+
+.info-list div {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 14px;
+  align-items: center;
+  border-radius: 18px;
+  padding: 16px;
+  background: #f5f1e8;
+}
+
+.info-list span,
+.subscription-item span {
+  color: #59635d;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.info-list strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.subscriptions-card {
+  display: grid;
+  gap: 22px;
+  align-content: start;
+}
+
+.subscriptions-title h3,
+.profile-locked h3 {
+  margin: 12px 0 0;
+  font-size: 2rem;
+}
+
+.subscription-list {
+  display: grid;
+  gap: 14px;
+}
+
+.subscription-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: 20px;
+  padding: 18px;
+  background: #f5f1e8;
+}
+
+.subscription-item div {
+  display: grid;
+  gap: 5px;
+}
+
+.subscription-item small {
+  color: #59635d;
+}
+
+.subscription-item p {
+  margin-bottom: 0;
+  color: #16211c;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.profile-locked {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.profile-locked p {
+  max-width: 620px;
+  color: #59635d;
+  line-height: 1.7;
+}
+
+@media (max-width: 860px) {
+  .topbar {
+    position: static;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .hero,
+  .intro-section,
+  .pricing-section,
+  .auth-section,
+  .trainers-heading,
+  .profile-heading,
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .trainer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: auto;
+    padding-top: 30px;
+  }
+
+  .preview-screen {
+    min-height: 430px;
+  }
+
+  .member-band {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+}
+
+@media (max-width: 620px) {
+  .site-shell {
+    width: min(100% - 22px, 1180px);
+  }
+
+  .ghost-button {
+    display: none;
+  }
+
+  .benefit-grid,
+  .workout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-screen {
+    min-height: 360px;
+  }
+
+  .hero-stats span {
+    flex: 1 1 130px;
+  }
+
+  .member-band,
+  .price-card,
+  .auth-panel,
+  .profile-main,
+  .subscriptions-card,
+  .profile-locked {
+    padding: 26px;
+  }
+
+  .info-list div,
+  .subscription-item {
+    grid-template-columns: 1fr;
+  }
+
+  .subscription-item {
+    display: grid;
+  }
+}
