@@ -13,6 +13,7 @@ import type {
 type Language = "en" | "et";
 type PageId = "overview" | "library" | "playlists" | "membership" | "admin";
 type AuthMode = "login" | "register";
+type AdminSection = "categories" | "trainers" | "packages" | "videos" | "users";
 type Banner = { type: "success" | "error"; text: string } | null;
 
 type CategoryFormState = {
@@ -140,6 +141,11 @@ const copy = {
     packageManager: "Package manager",
     videoManager: "Video manager",
     userManager: "User manager",
+    adminWorkspaceHint: "Choose a resource and manage it from one focused control panel.",
+    adminSearchPlaceholder: "Search in the current admin section",
+    adminResetPanel: "Reset panel",
+    adminNoMatches: "No records match the current search.",
+    adminSelfDeleteBlocked: "Use the logout button instead of deleting the current admin account.",
     save: "Save",
     edit: "Edit",
     delete: "Delete",
@@ -229,6 +235,11 @@ const copy = {
     packageManager: "Pakettide haldus",
     videoManager: "Videote haldus",
     userManager: "Kasutajate haldus",
+    adminWorkspaceHint: "Vali andmetüüp ja halda seda ühest keskendunud admin-paneelist.",
+    adminSearchPlaceholder: "Otsi aktiivsest admin-sektsioonist",
+    adminResetPanel: "Lähtesta paneel",
+    adminNoMatches: "Praeguse otsinguga sobivaid kirjeid ei leitud.",
+    adminSelfDeleteBlocked: "Kasuta väljalogimise nuppu, mitte ära kustuta aktiivset admin-kontot.",
     save: "Salvesta",
     edit: "Muuda",
     delete: "Kustuta",
@@ -297,6 +308,14 @@ function formatPrice(value: number | string) {
   }).format(numeric);
 }
 
+function matchesQuery(values: Array<string | number | null | undefined>, normalizedQuery: string) {
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return values.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
+}
+
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <article className="stat-card">
@@ -351,6 +370,8 @@ function App() {
   });
   const [currentPage, setCurrentPage] = useState<PageId>("overview");
   const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [adminSection, setAdminSection] = useState<AdminSection>("categories");
+  const [adminSearch, setAdminSearch] = useState("");
   const [banner, setBanner] = useState<Banner>(null);
   const [booting, setBooting] = useState(true);
   const [authBusy, setAuthBusy] = useState(false);
@@ -393,6 +414,47 @@ function App() {
   const isAdmin = user?.role === "ADMIN";
   const activePlaylist = playlists.find((playlist) => playlist.playlistId === activePlaylistId) ?? null;
   const currentPageLabel = t.nav[currentPage as keyof typeof t.nav];
+  const normalizedAdminSearch = adminSearch.trim().toLowerCase();
+  const adminSections: Array<{
+    id: AdminSection;
+    title: string;
+    count: number;
+  }> = [
+    { id: "categories", title: t.categoryManager, count: categories.length },
+    { id: "trainers", title: t.trainerManager, count: trainers.length },
+    { id: "packages", title: t.packageManager, count: packages.length },
+    { id: "videos", title: t.videoManager, count: videos.length },
+    { id: "users", title: t.userManager, count: users.length },
+  ];
+  const activeAdminSection = adminSections.find((section) => section.id === adminSection) ?? adminSections[0];
+  const filteredCategories = categories.filter((category) =>
+    matchesQuery([category.categoryName], normalizedAdminSearch),
+  );
+  const filteredTrainers = trainers.filter((trainer) =>
+    matchesQuery([trainer.trainerName, trainer.bio, trainer.startDate], normalizedAdminSearch),
+  );
+  const filteredPackages = packages.filter((subscriptionPlan) =>
+    matchesQuery(
+      [subscriptionPlan.planName, subscriptionPlan.durationMonths, subscriptionPlan.price],
+      normalizedAdminSearch,
+    ),
+  );
+  const filteredVideos = videos.filter((video) =>
+    matchesQuery(
+      [
+        video.title,
+        video.shortDescription,
+        video.language,
+        video.equipment,
+        video.trainer?.trainerName,
+        video.category?.categoryName,
+      ],
+      normalizedAdminSearch,
+    ),
+  );
+  const filteredUsers = users.filter((listedUser) =>
+    matchesQuery([listedUser.name, listedUser.email, listedUser.role], normalizedAdminSearch),
+  );
 
   useEffect(() => {
     window.localStorage.setItem("trainflow_language", language);
@@ -1044,6 +1106,14 @@ function App() {
   }
 
   async function handleDeleteUser(userId: number) {
+    if (user?.userId === userId) {
+      setBanner({
+        type: "error",
+        text: t.adminSelfDeleteBlocked,
+      });
+      return;
+    }
+
     try {
       await api.users.delete(userId);
       setUsers(await api.users.list());
@@ -1059,6 +1129,41 @@ function App() {
         text: error instanceof Error ? error.message : "User deletion failed.",
       });
     }
+  }
+
+  function resetAdminEditor(section = adminSection) {
+    if (section === "categories") {
+      setEditingCategoryId(null);
+      setCategoryForm(initialCategoryForm);
+      return;
+    }
+
+    if (section === "trainers") {
+      setEditingTrainerId(null);
+      setTrainerForm(initialTrainerForm);
+      return;
+    }
+
+    if (section === "packages") {
+      setEditingPackageId(null);
+      setPackageForm(initialPackageForm);
+      return;
+    }
+
+    if (section === "videos") {
+      setEditingVideoId(null);
+      setVideoForm(initialVideoForm);
+      return;
+    }
+
+    setEditingUserId(null);
+    setUserForm(initialUserForm);
+  }
+
+  function setAdminWorkspace(section: AdminSection) {
+    setAdminSection(section);
+    setAdminSearch("");
+    resetAdminEditor(section);
   }
 
   if (booting) {
@@ -1248,8 +1353,10 @@ function App() {
                       onChange={(event) =>
                         setAuthForm((current) => ({ ...current, email: event.target.value }))
                       }
+                      autoComplete="email"
+                      inputMode="email"
                       required
-                      type="email"
+                      type="text"
                     />
                   </Field>
                   <Field label={t.authPassword}>
@@ -1602,10 +1709,58 @@ function App() {
             <SectionHeader
               eyebrow={t.nav.admin}
               title={t.adminTitle}
-              text={t.adminText}
+              text={`${t.adminText} ${t.adminWorkspaceHint}`}
             />
 
+            <div className="admin-overview-grid">
+              {adminSections.map((section) => (
+                <button
+                  key={section.id}
+                  className={adminSection === section.id ? "admin-summary-card active" : "admin-summary-card"}
+                  type="button"
+                  onClick={() => setAdminWorkspace(section.id)}
+                >
+                  <span>{section.title}</span>
+                  <strong>{section.count}</strong>
+                </button>
+              ))}
+            </div>
+
+            <div className="admin-switcher">
+              {adminSections.map((section) => (
+                <button
+                  key={section.id}
+                  className={adminSection === section.id ? "admin-switch active" : "admin-switch"}
+                  type="button"
+                  onClick={() => setAdminWorkspace(section.id)}
+                >
+                  {section.title}
+                </button>
+              ))}
+            </div>
+
+            <div className="admin-toolbar">
+              <div className="admin-toolbar-copy">
+                <span className="section-eyebrow">{activeAdminSection.title}</span>
+                <p>{t.adminWorkspaceHint}</p>
+              </div>
+              <div className="admin-toolbar-actions">
+                <Field label={t.searchLabel}>
+                  <input
+                    type="text"
+                    value={adminSearch}
+                    placeholder={t.adminSearchPlaceholder}
+                    onChange={(event) => setAdminSearch(event.target.value)}
+                  />
+                </Field>
+                <button className="small-action ghost" type="button" onClick={() => resetAdminEditor()}>
+                  {t.adminResetPanel}
+                </button>
+              </div>
+            </div>
+
             <div className="admin-grid">
+              {adminSection === "categories" ? (
               <article className="admin-card">
                 <h3>{t.categoryManager}</h3>
                 <Field label={t.categoryFilter}>
@@ -1640,14 +1795,28 @@ function App() {
                   ) : null}
                 </div>
                 <div className="mini-list">
-                  {categories.map((category) => (
-                    <button className="selectable-row" key={category.categoryId} type="button" onClick={() => fillCategoryForm(category)}>
-                      {category.categoryName}
-                    </button>
-                  ))}
+                  {filteredCategories.length ? (
+                    filteredCategories.map((category) => (
+                      <button
+                        className={editingCategoryId === category.categoryId ? "selectable-row active" : "selectable-row"}
+                        key={category.categoryId}
+                        type="button"
+                        onClick={() => fillCategoryForm(category)}
+                      >
+                        <strong>{category.categoryName}</strong>
+                        <div className="row-meta">
+                          <span>{videos.filter((video) => video.categoryId === category.categoryId).length} {t.statsVideos.toLowerCase()}</span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
+                  )}
                 </div>
               </article>
+              ) : null}
 
+              {adminSection === "trainers" ? (
               <article className="admin-card">
                 <h3>{t.trainerManager}</h3>
                 <Field label={t.authName}>
@@ -1697,14 +1866,29 @@ function App() {
                   ) : null}
                 </div>
                 <div className="mini-list">
-                  {trainers.map((trainer) => (
-                    <button className="selectable-row" key={trainer.trainerId} type="button" onClick={() => fillTrainerForm(trainer)}>
-                      {trainer.trainerName}
-                    </button>
-                  ))}
+                  {filteredTrainers.length ? (
+                    filteredTrainers.map((trainer) => (
+                      <button
+                        className={editingTrainerId === trainer.trainerId ? "selectable-row active" : "selectable-row"}
+                        key={trainer.trainerId}
+                        type="button"
+                        onClick={() => fillTrainerForm(trainer)}
+                      >
+                        <strong>{trainer.trainerName}</strong>
+                        <div className="row-meta">
+                          <span>{videos.filter((video) => video.trainerId === trainer.trainerId).length} {t.statsVideos.toLowerCase()}</span>
+                          <span>{formatDate(trainer.startDate)}</span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
+                  )}
                 </div>
               </article>
+              ) : null}
 
+              {adminSection === "packages" ? (
               <article className="admin-card">
                 <h3>{t.packageManager}</h3>
                 <Field label={t.playlistName}>
@@ -1761,19 +1945,29 @@ function App() {
                   ) : null}
                 </div>
                 <div className="mini-list">
-                  {packages.map((subscriptionPlan) => (
-                    <button
-                      className="selectable-row"
-                      key={subscriptionPlan.planId}
-                      type="button"
-                      onClick={() => fillPackageForm(subscriptionPlan)}
-                    >
-                      {subscriptionPlan.planName}
-                    </button>
-                  ))}
+                  {filteredPackages.length ? (
+                    filteredPackages.map((subscriptionPlan) => (
+                      <button
+                        className={editingPackageId === subscriptionPlan.planId ? "selectable-row active" : "selectable-row"}
+                        key={subscriptionPlan.planId}
+                        type="button"
+                        onClick={() => fillPackageForm(subscriptionPlan)}
+                      >
+                        <strong>{subscriptionPlan.planName}</strong>
+                        <div className="row-meta">
+                          <span>{formatPrice(subscriptionPlan.price)}</span>
+                          <span>{subscriptionPlan.durationMonths} {t.durationMonths.toLowerCase()}</span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
+                  )}
                 </div>
               </article>
+              ) : null}
 
+              {adminSection === "videos" ? (
               <article className="admin-card admin-card-wide">
                 <h3>{t.videoManager}</h3>
                 <div className="admin-form-grid">
@@ -1886,14 +2080,30 @@ function App() {
                   ) : null}
                 </div>
                 <div className="mini-list">
-                  {videos.map((video) => (
-                    <button className="selectable-row" key={video.videoId} type="button" onClick={() => fillVideoForm(video)}>
-                      {video.title}
-                    </button>
-                  ))}
+                  {filteredVideos.length ? (
+                    filteredVideos.map((video) => (
+                      <button
+                        className={editingVideoId === video.videoId ? "selectable-row active" : "selectable-row"}
+                        key={video.videoId}
+                        type="button"
+                        onClick={() => fillVideoForm(video)}
+                      >
+                        <strong>{video.title}</strong>
+                        <div className="row-meta">
+                          <span>{video.trainer?.trainerName ?? "—"}</span>
+                          <span>{video.category?.categoryName ?? "—"}</span>
+                          <span>{video.duration ? `${video.duration} min` : "—"}</span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
+                  )}
                 </div>
               </article>
+              ) : null}
 
+              {adminSection === "users" ? (
               <article className="admin-card admin-card-wide">
                 <h3>{t.userManager}</h3>
                 <div className="admin-form-grid">
@@ -1951,20 +2161,28 @@ function App() {
                   ) : null}
                 </div>
                 <div className="user-table">
-                  {users.map((listedUser) => (
-                    <button
-                      className="user-row"
-                      key={listedUser.userId}
-                      type="button"
-                      onClick={() => fillUserForm(listedUser)}
-                    >
-                      <strong>{listedUser.name}</strong>
-                      <span>{listedUser.email}</span>
-                      <span>{listedUser.role}</span>
-                    </button>
-                  ))}
+                  {filteredUsers.length ? (
+                    filteredUsers.map((listedUser) => (
+                      <button
+                        className={editingUserId === listedUser.userId ? "user-row active" : "user-row"}
+                        key={listedUser.userId}
+                        type="button"
+                        onClick={() => fillUserForm(listedUser)}
+                      >
+                        <strong>{listedUser.name}</strong>
+                        <span>{listedUser.email}</span>
+                        <div className="row-meta row-meta-end">
+                          <span>{listedUser.role}</span>
+                          <span>{subscriptions.filter((subscription) => subscription.userId === listedUser.userId).length} {t.statsSubscriptions.toLowerCase()}</span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
+                  )}
                 </div>
               </article>
+              ) : null}
             </div>
           </section>
         ) : null}
