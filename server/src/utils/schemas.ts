@@ -25,6 +25,9 @@ export const userUpdateSchema = z
     name: z.string().min(2).max(100).optional(),
     email: z.string().email().optional(),
     password: z.string().min(6).max(100).optional(),
+    preferredLanguage: z.string().max(10).optional(),
+    accountStatus: z.string().max(30).optional(),
+    roleCode: z.string().max(30).optional(),
   })
   .refine(requireAtLeastOneField, {
     message: "At least one field must be provided.",
@@ -57,6 +60,9 @@ export const videoCreateSchema = z.object({
   shortDescription: z.string().max(2000).optional(),
   trainerId: intIdSchema.optional(),
   categoryId: intIdSchema.optional(),
+  difficultyLevelId: intIdSchema.optional(),
+  accessTier: z.string().max(20).optional(),
+  isFeatured: z.coerce.boolean().optional(),
 });
 
 export const videoUpdateSchema = videoCreateSchema.partial().refine(requireAtLeastOneField, {
@@ -73,6 +79,9 @@ export const subscriptionPackageCreateSchema = z.object({
   planName: z.string().min(2).max(80),
   price: z.coerce.number().positive(),
   durationMonths: z.coerce.number().int().positive(),
+  accessTier: z.string().max(20).optional(),
+  isActive: z.coerce.boolean().optional(),
+  maxActivePrograms: z.coerce.number().int().positive().optional(),
 });
 
 export const subscriptionPackageUpdateSchema = subscriptionPackageCreateSchema
@@ -99,6 +108,8 @@ export const subscriptionCreateSchema = z.object({
   planId: intIdSchema,
   userId: intIdSchema.optional(),
   startDate: z.coerce.date().optional(),
+  autoRenew: z.coerce.boolean().optional(),
+  paymentMethod: z.string().max(30).optional(),
 });
 
 export const subscriptionUpdateSchema = z
@@ -106,7 +117,17 @@ export const subscriptionUpdateSchema = z
     planId: intIdSchema.optional(),
     userId: intIdSchema.optional(),
     startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+    status: z.string().max(20).optional(),
+    autoRenew: z.coerce.boolean().optional(),
   })
   .refine(requireAtLeastOneField, {
     message: "At least one field must be provided.",
   });
+
+export const workoutCompletionCreateSchema = z.object({
+  videoId: intIdSchema,
+  secondsWatched: z.coerce.number().int().positive().optional(),
+  rating: z.coerce.number().int().min(1).max(5).optional(),
+  note: z.string().max(500).optional(),
+});

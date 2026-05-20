@@ -437,6 +437,14 @@ p {
   background: rgba(255, 255, 255, 0.05);
 }
 
+.auth-card .section-eyebrow,
+.auth-card .section-header p,
+.auth-card .profile-meta p,
+.auth-card .profile-chip strong,
+.stat-card strong {
+  color: #f5f0e8;
+}
+
 .section-header {
   display: flex;
   align-items: flex-start;
@@ -703,20 +711,24 @@ textarea:focus {
 .split-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 24px;
+  align-items: start;
 }
 
 .mini-list {
   gap: 10px;
+  min-width: 0;
 }
 
 .mini-list-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px 16px;
   border-radius: 18px;
   background: #f5efe6;
+  min-width: 0;
 }
 
 .mini-list-row-button {
@@ -945,8 +957,9 @@ textarea:focus {
 }
 
 .playlist-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   margin-top: 24px;
+  align-items: start;
 }
 
 .playlist-card,
@@ -958,21 +971,51 @@ textarea:focus {
 
 .playlist-card {
   align-content: start;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.playlist-card .field,
+.playlist-card .mini-list,
+.playlist-card .card-actions,
+.playlist-card input,
+.playlist-card p,
+.playlist-card strong {
+  min-width: 0;
 }
 
 .selection-box {
   gap: 10px;
   padding: 18px 20px;
   background: #f8f2ea;
+  min-width: 0;
 }
 
 .plan-card {
   align-content: start;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.plan-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .plan-card .secondary-button,
 .plan-card .primary-button {
   margin-top: auto;
+  min-width: 0;
+}
+
+.plan-card span,
+.plan-card strong,
+.plan-card p,
+.plan-feature,
+.selection-box p,
+.mini-list-row strong,
+.user-row span,
+.user-row strong {
+  overflow-wrap: anywhere;
 }
 
 .plan-card-selected {
@@ -994,17 +1037,27 @@ textarea:focus {
 }
 
 .membership-checkout-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
   align-items: start;
 }
 
 .checkout-card {
   gap: 16px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.checkout-card .section-header {
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .subscription-list {
   display: grid;
   gap: 14px;
   margin-top: 28px;
+  min-width: 0;
+  align-content: start;
 }
 
 .subscription-card {
@@ -1012,6 +1065,8 @@ textarea:focus {
   border: 1px solid rgba(19, 32, 42, 0.08);
   border-radius: 22px;
   background: #fff9f2;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .admin-toolbar,
@@ -1098,6 +1153,10 @@ textarea:focus {
   align-items: start;
 }
 
+.admin-form-grid-compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .selectable-row,
 .user-row {
   display: grid;
@@ -1108,6 +1167,7 @@ textarea:focus {
   border-color: rgba(19, 32, 42, 0.08);
   background: #f5efe6;
   text-align: left;
+  min-width: 0;
 }
 
 .selectable-row strong,
@@ -1145,6 +1205,7 @@ textarea:focus {
 .user-table {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .user-row {
@@ -1152,6 +1213,37 @@ textarea:focus {
   grid-template-columns: 1fr 1.2fr auto;
   gap: 14px;
   align-items: center;
+}
+
+.admin-chip {
+  align-self: end;
+  min-height: 48px;
+  width: 100%;
+  justify-content: center;
+}
+
+.admin-chip span {
+  color: #13202a;
+}
+
+.admin-selection-box {
+  min-width: 0;
+}
+
+.data-card,
+.playlist-card,
+.checkout-card,
+.subscription-card {
+  overflow: hidden;
+}
+
+.data-card p,
+.playlist-card p,
+.checkout-card p,
+.subscription-card p,
+.mini-list-row strong,
+.selection-box p {
+  overflow-wrap: anywhere;
 }
 
 .footer-note {
@@ -1185,6 +1277,13 @@ textarea:focus {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.video-modal-header .small-action {
+  color: #f5f0e8;
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  flex: 0 0 auto;
 }
 
 .video-modal-header h3 {
@@ -1248,6 +1347,11 @@ textarea:focus {
     grid-template-columns: 1fr 1fr;
   }
 
+  .membership-checkout-grid,
+  .split-grid {
+    grid-template-columns: 1fr;
+  }
+
   .admin-toolbar {
     align-items: stretch;
     flex-direction: column;
@@ -1292,14 +1396,16 @@ textarea:focus {
   .admin-overview-grid,
   .plan-grid,
   .video-grid,
-  .playlist-grid,
   .admin-grid,
   .admin-form-grid,
   .admin-switcher,
   .filter-grid,
-  .split-grid,
   .stat-grid,
   .user-row {
+    grid-template-columns: 1fr;
+  }
+
+  .playlist-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1345,6 +1451,11 @@ textarea:focus {
   .video-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .playlist-grid,
+  .plan-grid {
+    grid-template-columns: 1fr;
   }
 
   .primary-button,

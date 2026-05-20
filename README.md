@@ -233,3 +233,11 @@ Then open:
 - `GET /api/packages`
 - `GET /api/playlists`
 - `GET /api/subscriptions`
+
+## Database project documentation
+
+For the university database project materials, see:
+
+- [docs/database-project.md](/Users/leonti/Library/CloudStorage/OneDrive-TallinnaTehnikaülikool/Veebiprogrammeerimine%202026/Treeningute_platvorm/docs/database-project.md)
+- [docs/database-ddl.sql](/Users/leonti/Library/CloudStorage/OneDrive-TallinnaTehnikaülikool/Veebiprogrammeerimine%202026/Treeningute_platvorm/docs/database-ddl.sql)
+- [docs/database-support.sql](/Users/leonti/Library/CloudStorage/OneDrive-TallinnaTehnikaülikool/Veebiprogrammeerimine%202026/Treeningute_platvorm/docs/database-support.sql)

@@ -47,6 +47,10 @@ type UserFormState = {
   name: string;
   email: string;
   password: string;
+  roleCode: "ADMIN" | "USER";
+  accountStatus: "ACTIVE" | "SUSPENDED";
+  subscriptionPlanId: string;
+  autoRenew: boolean;
 };
 
 type AccessTier = "none" | "starter" | "active" | "full";
@@ -90,6 +94,10 @@ const initialUserForm: UserFormState = {
   name: "",
   email: "",
   password: "",
+  roleCode: "USER",
+  accountStatus: "ACTIVE",
+  subscriptionPlanId: "",
+  autoRenew: false,
 };
 
 const initialPaymentForm: PaymentFormState = {
@@ -174,10 +182,15 @@ const copy = {
     durationMonths: "Duration months",
     trainerBio: "Bio",
     role: "Role",
+    accountStatus: "Account status",
     registerDate: "Registered",
     currentUser: "Current user",
     roleAdmin: "Admin",
     roleUser: "User",
+    statusActive: "Active",
+    statusSuspended: "Suspended",
+    assignPlan: "Add subscription",
+    currentPlan: "Current plan",
     dashboardGuestCta: "Sign in to open your library, playlists, and paid access inside FitNest.",
     adminOnly: "Admin tools are visible only for the admin account.",
     choosePlaylist: "Active playlist",
@@ -303,10 +316,15 @@ const copy = {
     durationMonths: "Kuude arv",
     trainerBio: "Tutvustus",
     role: "Roll",
+    accountStatus: "Konto staatus",
     registerDate: "Registreeritud",
     currentUser: "Praegune kasutaja",
     roleAdmin: "Admin",
     roleUser: "Kasutaja",
+    statusActive: "Aktiivne",
+    statusSuspended: "Peatatud",
+    assignPlan: "Lisa tellimus",
+    currentPlan: "Praegune pakett",
     dashboardGuestCta: "Logi sisse, et avada oma videoteek, pleilistid ja tasuline ligipääs FitNestis.",
     adminOnly: "Admin tööriistad on nähtavad ainult admin-kontole.",
     choosePlaylist: "Aktiivne pleilist",
@@ -669,6 +687,13 @@ function App() {
   const filteredUsers = users.filter((listedUser) =>
     matchesQuery([listedUser.name, listedUser.email, listedUser.role], normalizedAdminSearch),
   );
+  const editingUserSubscriptions = editingUserId
+    ? subscriptions.filter((subscription) => subscription.userId === editingUserId)
+    : [];
+  const editingUserActiveSubscription =
+    editingUserSubscriptions.find((subscription) => subscription.status === "ACTIVE") ??
+    editingUserSubscriptions[0] ??
+    null;
 
   useEffect(() => {
     window.localStorage.setItem("trainflow_language", language);
@@ -1171,6 +1196,11 @@ function App() {
       name: nextUser.name,
       email: nextUser.email,
       password: "",
+      roleCode: nextUser.role,
+      accountStatus:
+        nextUser.accountStatus === "SUSPENDED" ? "SUSPENDED" : "ACTIVE",
+      subscriptionPlanId: "",
+      autoRenew: false,
     });
   }
 
@@ -1371,8 +1401,17 @@ function App() {
         name: userForm.name || undefined,
         email: userForm.email || undefined,
         password: userForm.password || undefined,
+        roleCode: userForm.roleCode,
+        accountStatus: userForm.accountStatus,
       });
-      setUsers(await api.users.list());
+      const [nextUsers, nextCurrentUser] = await Promise.all([
+        api.users.list(),
+        user?.userId === editingUserId ? api.auth.me() : Promise.resolve(null),
+      ]);
+      setUsers(nextUsers);
+      if (nextCurrentUser) {
+        setUser(nextCurrentUser);
+      }
       setEditingUserId(null);
       setUserForm(initialUserForm);
       setBanner({
@@ -1383,6 +1422,39 @@ function App() {
       setBanner({
         type: "error",
         text: error instanceof Error ? error.message : "User update failed.",
+      });
+    }
+  }
+
+  async function handleAssignSubscriptionToUser() {
+    if (!editingUserId || !userForm.subscriptionPlanId) {
+      setBanner({
+        type: "error",
+        text: "Choose a user and a plan first.",
+      });
+      return;
+    }
+
+    try {
+      await api.subscriptions.create({
+        userId: editingUserId,
+        planId: Number(userForm.subscriptionPlanId),
+        autoRenew: userForm.autoRenew,
+      });
+      setSubscriptions(await api.subscriptions.list());
+      setUserForm((current) => ({
+        ...current,
+        subscriptionPlanId: "",
+        autoRenew: false,
+      }));
+      setBanner({
+        type: "success",
+        text: "Subscription added successfully.",
+      });
+    } catch (error) {
+      setBanner({
+        type: "error",
+        text: error instanceof Error ? error.message : "Subscription assignment failed.",
       });
     }
   }
@@ -2600,6 +2672,73 @@ function App() {
                       }
                     />
                   </Field>
+                  <Field label={t.role}>
+                    <select
+                      value={userForm.roleCode}
+                      onChange={(event) =>
+                        setUserForm((current) => ({
+                          ...current,
+                          roleCode: event.target.value as UserFormState["roleCode"],
+                        }))
+                      }
+                    >
+                      <option value="USER">{t.roleUser}</option>
+                      <option value="ADMIN">{t.roleAdmin}</option>
+                    </select>
+                  </Field>
+                  <Field label={t.accountStatus}>
+                    <select
+                      value={userForm.accountStatus}
+                      onChange={(event) =>
+                        setUserForm((current) => ({
+                          ...current,
+                          accountStatus: event.target.value as UserFormState["accountStatus"],
+                        }))
+                      }
+                    >
+                      <option value="ACTIVE">{t.statusActive}</option>
+                      <option value="SUSPENDED">{t.statusSuspended}</option>
+                    </select>
+                  </Field>
+                </div>
+                <div className="admin-form-grid admin-form-grid-compact">
+                  <Field label={t.assignPlan}>
+                    <select
+                      value={userForm.subscriptionPlanId}
+                      onChange={(event) =>
+                        setUserForm((current) => ({
+                          ...current,
+                          subscriptionPlanId: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">—</option>
+                      {packages.map((subscriptionPlan) => (
+                        <option key={subscriptionPlan.planId} value={subscriptionPlan.planId}>
+                          {subscriptionPlan.planName}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <label className="checkbox-chip admin-chip">
+                    <input
+                      checked={userForm.autoRenew}
+                      type="checkbox"
+                      onChange={(event) =>
+                        setUserForm((current) => ({
+                          ...current,
+                          autoRenew: event.target.checked,
+                        }))
+                      }
+                    />
+                    <span>Auto renew</span>
+                  </label>
+                </div>
+                <div className="selection-box admin-selection-box">
+                  <span>{t.currentPlan}</span>
+                  <p>
+                    {editingUserActiveSubscription?.plan?.planName ?? t.noSubscriptions}
+                  </p>
                 </div>
                 <div className="card-actions">
                   <button
@@ -2620,6 +2759,14 @@ function App() {
                   >
                     {t.cancel}
                   </button>
+                  <button
+                    className="small-action"
+                    disabled={!editingUserId || !userForm.subscriptionPlanId}
+                    type="button"
+                    onClick={handleAssignSubscriptionToUser}
+                  >
+                    {t.assignPlan}
+                  </button>
                   {editingUserId ? (
                     <button className="small-action danger" type="button" onClick={() => handleDeleteUser(editingUserId)}>
                       {t.delete}
@@ -2639,7 +2786,10 @@ function App() {
                         <span>{listedUser.email}</span>
                         <div className="row-meta row-meta-end">
                           <span>{listedUser.role}</span>
-                          <span>{subscriptions.filter((subscription) => subscription.userId === listedUser.userId).length} {t.statsSubscriptions.toLowerCase()}</span>
+                          <span>{listedUser.accountStatus ?? t.statusActive}</span>
+                          <span>
+                            {subscriptions.filter((subscription) => subscription.userId === listedUser.userId).length} {t.statsSubscriptions.toLowerCase()}
+                          </span>
                         </div>
                       </button>
                     ))
@@ -2676,7 +2826,7 @@ function App() {
                 <h3>{activeVideo.title}</h3>
               </div>
               <button className="small-action ghost" type="button" onClick={() => setActiveVideo(null)}>
-                {t.closeVideo}
+                <span>{t.closeVideo}</span>
               </button>
             </div>
             <div className="video-frame-shell">

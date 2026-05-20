@@ -71,6 +71,8 @@ export const createSubscription = asyncHandler(async (req: Request, res: Respons
     planId: number;
     userId?: number;
     startDate?: Date;
+    autoRenew?: boolean;
+    paymentMethod?: string;
   };
 
   const targetUserId =
@@ -84,12 +86,24 @@ export const createSubscription = asyncHandler(async (req: Request, res: Respons
     throw new ApiError(404, "Subscription plan not found.");
   }
 
-  const subscription = await prisma.userSubscription.create({
-    data: {
-      userId: targetUserId,
-      planId: body.planId,
-      startDate: body.startDate,
-    },
+  const startDate = body.startDate ?? new Date();
+  const createdRows = await prisma.$queryRaw<Array<{ subscription_id: number }>>`
+    SELECT public.sp_create_subscription(
+      ${targetUserId}::integer,
+      ${body.planId}::integer,
+      ${startDate}::timestamptz,
+      ${body.autoRenew ?? false}::boolean
+    ) AS subscription_id
+  `;
+
+  const subscriptionId = createdRows[0]?.subscription_id;
+
+  if (!subscriptionId) {
+    throw new ApiError(500, "Subscription payment could not be created.");
+  }
+
+  const subscription = await prisma.userSubscription.findUniqueOrThrow({
+    where: { userSubscriptionId: subscriptionId },
     include: subscriptionInclude,
   });
 
@@ -122,10 +136,15 @@ export const updateSubscription = asyncHandler(async (req: Request, res: Respons
     planId?: number;
     userId?: number;
     startDate?: Date;
+    endDate?: Date;
+    status?: string;
+    autoRenew?: boolean;
   };
 
+  let nextPlan = null;
+
   if (body.planId) {
-    const nextPlan = await prisma.subscriptionPlan.findUnique({
+    nextPlan = await prisma.subscriptionPlan.findUnique({
       where: { planId: body.planId },
     });
 
@@ -142,6 +161,19 @@ export const updateSubscription = asyncHandler(async (req: Request, res: Respons
         ? { userId: body.userId }
         : {}),
       ...(body.startDate ? { startDate: body.startDate } : {}),
+      ...(body.endDate ? { endDate: body.endDate } : {}),
+      ...(body.status ? { status: body.status } : {}),
+      ...(body.autoRenew !== undefined ? { autoRenew: body.autoRenew } : {}),
+      ...(body.planId && nextPlan && !body.endDate
+        ? {
+            endDate: new Date(
+              new Date(body.startDate ?? existingSubscription.startDate ?? new Date()).setMonth(
+                new Date(body.startDate ?? existingSubscription.startDate ?? new Date()).getMonth() +
+                  nextPlan.durationMonths,
+              ),
+            ),
+          }
+        : {}),
     },
     include: subscriptionInclude,
   });

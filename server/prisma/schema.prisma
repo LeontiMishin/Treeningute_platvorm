@@ -8,89 +8,130 @@ datasource db {
 }
 
 model User {
-  userId        Int                @id @default(autoincrement()) @map("userid")
-  name          String             @map("name") @db.Text
-  email         String             @unique @map("email") @db.Text
-  passwordHash  String             @map("passwordhash") @db.Text
-  registerDate  DateTime?          @default(now()) @map("registerdate") @db.Date
-  playlists     Playlist[]
-  subscriptions UserSubscription[]
+  userId              Int                 @id @default(autoincrement()) @map("userid")
+  name                String              @map("name") @db.Text
+  email               String              @unique @map("email") @db.Text
+  passwordHash        String              @map("passwordhash") @db.Text
+  registerDate        DateTime?           @default(now()) @map("registerdate") @db.Date
+  roleCode            String              @default("USER") @map("rolecode") @db.VarChar(30)
+  accountStatus       String              @default("ACTIVE") @map("accountstatus") @db.VarChar(30)
+  preferredLanguage   String?             @map("preferredlanguage") @db.VarChar(10)
+  playlists           Playlist[]
+  subscriptions       UserSubscription[]
+  workoutCompletions  WorkoutCompletion[]
+  trainerProfile      Trainer?
 
+  @@index([roleCode])
+  @@index([accountStatus])
   @@map("users")
 }
 
 model Trainer {
-  trainerId   Int       @id @default(autoincrement()) @map("trainerid")
-  trainerName String    @map("trainername") @db.Text
-  bio         String?   @map("bio") @db.Text
-  startDate   DateTime? @map("startdate") @db.Date
-  videos      Video[]
+  trainerId         Int       @id @default(autoincrement()) @map("trainerid")
+  trainerName       String    @map("trainername") @db.Text
+  bio               String?   @map("bio") @db.Text
+  startDate         DateTime? @map("startdate") @db.Date
+  userId            Int?      @unique @map("userid")
+  headline          String?   @map("headline") @db.Text
+  yearsExperience   Int?      @map("yearsexperience")
+  videos            Video[]
+  user              User?     @relation(fields: [userId], references: [userId], onDelete: SetNull)
 
   @@map("trainers")
 }
 
 model Category {
-  categoryId   Int     @id @default(autoincrement()) @map("categoryid")
-  categoryName String  @map("categoryname") @db.Text
-  videos       Video[]
+  categoryId    Int     @id @default(autoincrement()) @map("categoryid")
+  categoryName  String  @map("categoryname") @db.Text
+  videos        Video[]
 
   @@map("categories")
 }
 
 model SubscriptionPlan {
-  planId         Int                @id @default(autoincrement()) @map("planid")
-  planName       String             @map("planname") @db.Text
-  price          Decimal            @map("price") @db.Decimal(10, 2)
-  durationMonths Int                @map("durationmonths")
-  subscriptions  UserSubscription[]
+  planId              Int                 @id @default(autoincrement()) @map("planid")
+  planName            String              @map("planname") @db.Text
+  price               Decimal             @map("price") @db.Decimal(10, 2)
+  durationMonths      Int                 @map("durationmonths")
+  accessTier          String              @default("STARTER") @map("accesstier") @db.VarChar(20)
+  isActive            Boolean             @default(true) @map("isactive")
+  maxActivePrograms   Int?                @map("maxactiveprograms")
+  subscriptions       UserSubscription[]
 
+  @@index([accessTier, isActive])
   @@map("subscription_plans")
 }
 
 model Video {
-  videoId           Int             @id @default(autoincrement()) @map("videoid")
-  duration          Int?            @map("duration")
-  title             String          @map("title") @db.Text
-  videoURL          String?         @map("videourl") @db.Text
-  language          String?         @map("language") @db.Text
-  equipment         String?         @map("equipment") @db.Text
-  shortDescription  String?         @map("shortdescription") @db.Text
-  trainerId         Int?            @map("trainerid")
-  categoryId        Int?            @map("categoryid")
-  trainer           Trainer?        @relation(fields: [trainerId], references: [trainerId], onDelete: SetNull)
-  category          Category?       @relation(fields: [categoryId], references: [categoryId], onDelete: SetNull)
-  playlistVideos    PlaylistVideo[]
+  videoId             Int                  @id @default(autoincrement()) @map("videoid")
+  duration            Int?                 @map("duration")
+  title               String               @map("title") @db.Text
+  videoURL            String?              @map("videourl") @db.Text
+  language            String?              @map("language") @db.Text
+  equipment           String?              @map("equipment") @db.Text
+  shortDescription    String?              @map("shortdescription") @db.Text
+  trainerId           Int?                 @map("trainerid")
+  categoryId          Int?                 @map("categoryid")
+  accessTier          String               @default("STARTER") @map("accesstier") @db.VarChar(20)
+  publishedAt         DateTime?            @default(now()) @map("publishedat") @db.Timestamptz(6)
+  isFeatured          Boolean              @default(false) @map("isfeatured")
+  trainer             Trainer?             @relation(fields: [trainerId], references: [trainerId], onDelete: SetNull)
+  category            Category?            @relation(fields: [categoryId], references: [categoryId], onDelete: SetNull)
+  playlistVideos      PlaylistVideo[]
+  workoutCompletions  WorkoutCompletion[]
 
+  @@index([trainerId, categoryId])
+  @@index([accessTier, publishedAt])
   @@map("videos")
 }
 
 model UserSubscription {
-  userSubscriptionId Int               @id @default(autoincrement()) @map("usersubscriptionid")
-  startDate          DateTime?         @default(now()) @map("startdate") @db.Date
-  userId             Int?              @map("userid")
-  planId             Int?              @map("planid")
-  user               User?             @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  plan               SubscriptionPlan? @relation(fields: [planId], references: [planId], onDelete: Cascade)
+  userSubscriptionId  Int                @id @default(autoincrement()) @map("usersubscriptionid")
+  startDate           DateTime?          @default(now()) @map("startdate") @db.Date
+  endDate             DateTime?          @map("enddate") @db.Date
+  status              String             @default("ACTIVE") @map("status") @db.VarChar(20)
+  autoRenew           Boolean            @default(false) @map("autorenew")
+  userId              Int?               @map("userid")
+  planId              Int?               @map("planid")
+  user                User?              @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  plan                SubscriptionPlan?  @relation(fields: [planId], references: [planId], onDelete: Cascade)
 
+  @@index([userId, status])
   @@map("user_subscriptions")
 }
 
+model WorkoutCompletion {
+  workoutCompletionId  Int       @id @default(autoincrement()) @map("workoutcompletionid")
+  userId               Int       @map("userid")
+  videoId              Int       @map("videoid")
+  completedAt          DateTime  @default(now()) @map("completedat") @db.Timestamptz(6)
+  rating               Int?      @map("rating")
+  note                 String?   @map("note") @db.Text
+  secondsWatched       Int?      @map("secondswatched")
+  user                 User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  video                Video     @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+  @@index([videoId, completedAt])
+  @@map("workout_completions")
+}
+
 model Playlist {
-  playlistId     Int             @id @default(autoincrement()) @map("playlistid")
-  playlistName   String          @map("playlistname") @db.Text
-  userId         Int?            @map("userid")
-  user           User?           @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  playlistVideos PlaylistVideo[]
+  playlistId       Int             @id @default(autoincrement()) @map("playlistid")
+  playlistName     String          @map("playlistname") @db.Text
+  userId           Int?            @map("userid")
+  user             User?           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  playlistVideos   PlaylistVideo[]
 
   @@map("playlists")
 }
 
 model PlaylistVideo {
-  playlistVideoId Int       @id @default(autoincrement()) @map("playlistvideoid")
-  playlistId      Int?      @map("playlistid")
-  videoId         Int?      @map("videoid")
-  playlist        Playlist? @relation(fields: [playlistId], references: [playlistId], onDelete: Cascade)
-  video           Video?    @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
+  playlistVideoId  Int       @id @default(autoincrement()) @map("playlistvideoid")
+  playlistId       Int?      @map("playlistid")
+  videoId          Int?      @map("videoid")
+  playlist         Playlist? @relation(fields: [playlistId], references: [playlistId], onDelete: Cascade)
+  video            Video?    @relation(fields: [videoId], references: [videoId], onDelete: Cascade)
 
   @@unique([playlistId, videoId])
   @@map("playlist_videos")

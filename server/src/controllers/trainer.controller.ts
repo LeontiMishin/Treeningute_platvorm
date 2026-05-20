@@ -5,6 +5,15 @@ import { asyncHandler } from "../utils/async-handler";
 
 export const listTrainers = asyncHandler(async (_req: Request, res: Response) => {
   const trainers = await prisma.trainer.findMany({
+    include: {
+      user: {
+        select: {
+          userId: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
     orderBy: {
       trainerName: "asc",
     },
@@ -20,6 +29,13 @@ export const getTrainerById = asyncHandler(async (req: Request, res: Response) =
     where: { trainerId: id },
     include: {
       videos: true,
+      user: {
+        select: {
+          userId: true,
+          name: true,
+          email: true,
+        },
+      },
     },
   });
 

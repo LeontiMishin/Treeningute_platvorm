@@ -6,6 +6,8 @@ export type User = {
   email: string;
   registerDate: string | null;
   role: UserRole;
+  accountStatus?: string;
+  preferredLanguage?: string | null;
 };
 
 export type Category = {
@@ -39,6 +41,9 @@ export type SubscriptionPlan = {
   planName: string;
   price: number | string;
   durationMonths: number;
+  accessTier?: string;
+  isActive?: boolean;
+  maxActivePrograms?: number | null;
 };
 
 export type PlaylistVideo = {
@@ -58,6 +63,9 @@ export type Playlist = {
 export type UserSubscription = {
   userSubscriptionId: number;
   startDate: string | null;
+  endDate?: string | null;
+  status?: string;
+  autoRenew?: boolean;
   userId: number | null;
   planId: number | null;
   plan?: SubscriptionPlan | null;
@@ -75,4 +83,3 @@ export type VideoQuery = {
   categoryId?: number;
   search?: string;
 };
-

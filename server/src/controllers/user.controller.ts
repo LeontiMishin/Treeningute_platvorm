@@ -47,6 +47,9 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     name?: string;
     email?: string;
     password?: string;
+    preferredLanguage?: string;
+    accountStatus?: string;
+    roleCode?: string;
   };
 
   const passwordHash = body.password ? await bcrypt.hash(body.password, 10) : undefined;
@@ -56,6 +59,11 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     data: {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.email !== undefined ? { email: body.email } : {}),
+      ...(body.preferredLanguage !== undefined
+        ? { preferredLanguage: body.preferredLanguage }
+        : {}),
+      ...(body.accountStatus !== undefined ? { accountStatus: body.accountStatus } : {}),
+      ...(body.roleCode !== undefined ? { roleCode: body.roleCode } : {}),
       ...(passwordHash ? { passwordHash } : {}),
     },
     select: publicUserSelect,
