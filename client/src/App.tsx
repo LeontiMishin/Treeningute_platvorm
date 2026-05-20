@@ -49,6 +49,14 @@ type UserFormState = {
   password: string;
 };
 
+type AccessTier = "none" | "starter" | "active" | "full";
+
+type PaymentFormState = {
+  email: string;
+  cardholder: string;
+  cardNumber: string;
+};
+
 const pageIds: PageId[] = ["overview", "library", "playlists", "membership", "admin"];
 
 const initialCategoryForm: CategoryFormState = {
@@ -84,38 +92,44 @@ const initialUserForm: UserFormState = {
   password: "",
 };
 
+const initialPaymentForm: PaymentFormState = {
+  email: "",
+  cardholder: "",
+  cardNumber: "4242 4242 4242 4242",
+};
+
 const copy = {
   en: {
-    brand: "TrainFlow",
-    tagline: "Frontend and backend working together.",
+    brand: "FitNest",
+    tagline: "Strength, mobility, and calm routines for every day.",
     nav: {
       overview: "Overview",
       library: "Library",
       playlists: "Playlists",
-      membership: "Membership",
+      membership: "Plans",
       admin: "Admin",
     },
-    heroEyebrow: "Connected platform",
-    heroTitle: "Your training frontend is now wired to the real backend API.",
+    heroEyebrow: "Daily movement",
+    heroTitle: "Build a home routine that feels focused, warm, and easy to return to.",
     heroText:
-      "Register or log in to load live videos, categories, trainers, packages, playlists, subscriptions, and admin tools from the existing Express + Prisma backend.",
+      "Explore guided strength, mobility, recovery, and yoga sessions. Save playlists, choose a plan, and unlock the training pace that fits your week.",
     authTitle: "Account",
     login: "Log in",
     register: "Register",
     logout: "Log out",
     refresh: "Refresh data",
-    guestTitle: "Sign in to unlock backend data",
+    guestTitle: "Join FitNest",
     guestText:
-      "The backend protects videos, trainers, categories, playlists, packages, and subscriptions behind JWT authentication.",
+      "Create an account to save playlists, unlock classes through plans, and keep your access in one place.",
     authName: "Name",
     authEmail: "Email",
     authPassword: "Password",
-    authSubmitLogin: "Enter platform",
+    authSubmitLogin: "Enter FitNest",
     authSubmitRegister: "Create account",
-    overviewTitle: "Platform summary",
-    overviewText: "This dashboard shows live counts and your current account state.",
+    overviewTitle: "Your training space",
+    overviewText: "See your access level, current plan, and the sessions that are ready for you right now.",
     libraryTitle: "Workout library",
-    libraryText: "Search and filter videos using the backend query endpoints.",
+    libraryText: "Browse classes by trainer, category, and the access level included in your plan.",
     searchLabel: "Search",
     searchPlaceholder: "Search by title or description",
     trainerFilter: "Trainer",
@@ -123,19 +137,19 @@ const copy = {
     allTrainers: "All trainers",
     allCategories: "All categories",
     noVideos: "No videos found for the current filters.",
-    playlistsTitle: "Playlists",
-    playlistsText: "Create playlists, rename them, add or remove videos, and delete them.",
+    playlistsTitle: "Your playlists",
+    playlistsText: "Build simple weekly collections, rename them anytime, and keep favourite sessions together.",
     createPlaylist: "Create playlist",
     playlistName: "Playlist name",
     selectedVideos: "Selected videos for new playlist",
     noPlaylists: "You do not have any playlists yet.",
-    membershipTitle: "Membership and subscriptions",
-    membershipText: "Packages come from the backend. You can create or cancel subscriptions here.",
-    subscribe: "Subscribe",
+    membershipTitle: "Plans and checkout",
+    membershipText: "Choose a plan, simulate payment, and unlock the classes included in your access level.",
+    subscribe: "Confirm payment",
     activeSubscriptions: "Active subscriptions",
     noSubscriptions: "No subscriptions yet.",
-    adminTitle: "Admin workspace",
-    adminText: "Manage categories, trainers, packages, videos, and users from the same frontend.",
+    adminTitle: "Studio admin",
+    adminText: "Manage categories, trainers, plans, videos, and members from one calm control room.",
     categoryManager: "Category manager",
     trainerManager: "Trainer manager",
     packageManager: "Package manager",
@@ -164,7 +178,7 @@ const copy = {
     currentUser: "Current user",
     roleAdmin: "Admin",
     roleUser: "User",
-    dashboardGuestCta: "Use the auth card to connect the frontend to the backend.",
+    dashboardGuestCta: "Sign in to open your library, playlists, and paid access inside FitNest.",
     adminOnly: "Admin tools are visible only for the admin account.",
     choosePlaylist: "Active playlist",
     addToPlaylist: "Add to active playlist",
@@ -178,10 +192,45 @@ const copy = {
     statsPackages: "Packages",
     statsPlaylists: "Playlists",
     statsSubscriptions: "Subscriptions",
+    watchNow: "Watch workout",
+    unlockThisVideo: "Unlock this workout",
+    simulatedCheckoutTitle: "Simulated checkout",
+    simulatedCheckoutText: "Use the demo payment form below to unlock the selected plan and show access changes inside the app.",
+    paymentEmail: "Payment email",
+    paymentCardholder: "Cardholder",
+    paymentCardNumber: "Card number",
+    selectPlan: "Choose plan",
+    selectedPlan: "Selected plan",
+    packageIncludes: "Includes",
+    accessLabel: "Current access",
+    accessNone: "No active plan",
+    accessStarter: "Starter access",
+    accessActive: "Active access",
+    accessFull: "Full access",
+    availableNow: "Available now",
+    accessNeeded: "Requires",
+    openMembership: "View plans",
+    closeVideo: "Close video",
+    noCategory: "No category",
+    noTrainer: "No trainer",
+    noLanguage: "No language",
+    noEquipment: "No equipment",
+    profileFocus: "Member focus",
+    nextBestPlan: "Recommended next step",
+    paymentSuccess: "Payment simulated and access updated.",
+    paymentHint: "This payment form is a safe demo used to show package access inside FitNest.",
+    paymentIncomplete: "Complete the simulated payment form first.",
+    lockedCount: "locked",
+    sessionDetailsSoon: "Session details coming soon.",
+    loadingApp: "Opening FitNest…",
+    signedOut: "You have been signed out.",
+    refreshSuccess: "Your FitNest content has been refreshed.",
+    loginSuccess: "Welcome back to FitNest.",
+    registerSuccess: "Your FitNest account is ready.",
   },
   et: {
-    brand: "TrainFlow",
-    tagline: "Frontend ja backend töötavad koos.",
+    brand: "FitNest",
+    tagline: "Jõud, liikuvus ja rahulik treeningurütm igaks päevaks.",
     nav: {
       overview: "Ülevaade",
       library: "Videoteek",
@@ -189,27 +238,27 @@ const copy = {
       membership: "Paketid",
       admin: "Admin",
     },
-    heroEyebrow: "Ühendatud platvorm",
-    heroTitle: "Sinu treeningu frontend on nüüd seotud päris backend API-ga.",
+    heroEyebrow: "Igapäevane liikumine",
+    heroTitle: "Loo kodune treeningurutiin, kuhu on lihtne tagasi tulla.",
     heroText:
-      "Registreeri või logi sisse, et laadida olemasolevast Express + Prisma backendist videod, kategooriad, treenerid, paketid, pleilistid, tellimused ja admin-tööriistad.",
+      "Avasta juhendatud jõu-, liikuvus-, taastumis- ja joogatunnid. Salvesta pleiliste, vali pakett ja ava just sinu nädalaga sobiv treeningutempo.",
     authTitle: "Konto",
     login: "Logi sisse",
     register: "Registreeri",
     logout: "Logi välja",
     refresh: "Värskenda andmeid",
-    guestTitle: "Logi sisse, et näha backend-andmeid",
+    guestTitle: "Liitu FitNestiga",
     guestText:
-      "Backend kaitseb videoid, treenereid, kategooriaid, pleiliste, pakette ja tellimusi JWT autentimisega.",
+      "Loo konto, et salvestada pleiliste, avada paketiga treeningud ja hoida kogu ligipääs ühes kohas.",
     authName: "Nimi",
     authEmail: "E-post",
     authPassword: "Parool",
-    authSubmitLogin: "Sisene platvormi",
+    authSubmitLogin: "Sisene FitNesti",
     authSubmitRegister: "Loo konto",
-    overviewTitle: "Platvormi ülevaade",
-    overviewText: "See juhtpaneel näitab pärisandmete koguseid ja sinu konto seisu.",
+    overviewTitle: "Sinu treeninguruum",
+    overviewText: "Vaata oma ligipääsutaset, aktiivset paketti ja treeninguid, mis on sulle praegu avatud.",
     libraryTitle: "Treeningute videoteek",
-    libraryText: "Otsi ja filtreeri videoid backend query-endpointide kaudu.",
+    libraryText: "Sirvi treeninguid treeneri, kategooria ja sinu paketis sisalduva ligipääsu järgi.",
     searchLabel: "Otsing",
     searchPlaceholder: "Otsi pealkirja või kirjelduse järgi",
     trainerFilter: "Treener",
@@ -217,19 +266,19 @@ const copy = {
     allTrainers: "Kõik treenerid",
     allCategories: "Kõik kategooriad",
     noVideos: "Praeguste filtritega videoid ei leitud.",
-    playlistsTitle: "Pleilistid",
-    playlistsText: "Loo pleiliste, nimeta ümber, lisa või eemalda videoid ja kustuta neid.",
+    playlistsTitle: "Sinu pleilistid",
+    playlistsText: "Koosta lihtsad nädalaplaanid, nimeta need ümber ja hoia lemmiktreeningud koos.",
     createPlaylist: "Loo pleilist",
     playlistName: "Pleilisti nimi",
     selectedVideos: "Valitud videod uue pleilisti jaoks",
     noPlaylists: "Sul ei ole veel ühtegi pleilisti.",
-    membershipTitle: "Paketid ja tellimused",
-    membershipText: "Paketid tulevad backendist. Siin saad luua või tühistada tellimusi.",
-    subscribe: "Telli",
+    membershipTitle: "Paketid ja makse",
+    membershipText: "Vali pakett, tee demomakse ja ava selle ligipääsutasemega treeningud.",
+    subscribe: "Kinnita makse",
     activeSubscriptions: "Aktiivsed tellimused",
     noSubscriptions: "Tellimusi veel ei ole.",
-    adminTitle: "Admin töölaud",
-    adminText: "Halda kategooriaid, treenereid, pakette, videoid ja kasutajaid samast frontendist.",
+    adminTitle: "Stuudio admin",
+    adminText: "Halda kategooriaid, treenereid, pakette, videoid ja liikmeid ühest rahulikust juhtpaneelist.",
     categoryManager: "Kategooriate haldus",
     trainerManager: "Treenerite haldus",
     packageManager: "Pakettide haldus",
@@ -258,7 +307,7 @@ const copy = {
     currentUser: "Praegune kasutaja",
     roleAdmin: "Admin",
     roleUser: "Kasutaja",
-    dashboardGuestCta: "Kasuta auth-kaarti, et ühendada frontend backendiga.",
+    dashboardGuestCta: "Logi sisse, et avada oma videoteek, pleilistid ja tasuline ligipääs FitNestis.",
     adminOnly: "Admin tööriistad on nähtavad ainult admin-kontole.",
     choosePlaylist: "Aktiivne pleilist",
     addToPlaylist: "Lisa aktiivsesse pleilisti",
@@ -272,6 +321,41 @@ const copy = {
     statsPackages: "Paketid",
     statsPlaylists: "Pleilistid",
     statsSubscriptions: "Tellimused",
+    watchNow: "Ava treening",
+    unlockThisVideo: "Ava see treening",
+    simulatedCheckoutTitle: "Demomakse",
+    simulatedCheckoutText: "Kasuta allolevat demo maksevormi, et avada valitud pakett ja näidata rakenduses ligipääsu muutust.",
+    paymentEmail: "Makse e-post",
+    paymentCardholder: "Kaardi omanik",
+    paymentCardNumber: "Kaardi number",
+    selectPlan: "Vali pakett",
+    selectedPlan: "Valitud pakett",
+    packageIncludes: "Sisaldab",
+    accessLabel: "Praegune ligipääs",
+    accessNone: "Aktiivne pakett puudub",
+    accessStarter: "Starter ligipääs",
+    accessActive: "Active ligipääs",
+    accessFull: "Täisligipääs",
+    availableNow: "Praegu saadaval",
+    accessNeeded: "Vajab",
+    openMembership: "Vaata pakette",
+    closeVideo: "Sulge video",
+    noCategory: "Kategooria puudub",
+    noTrainer: "Treener puudub",
+    noLanguage: "Keel puudub",
+    noEquipment: "Varustus puudub",
+    profileFocus: "Kasutaja fookus",
+    nextBestPlan: "Soovitatud järgmine samm",
+    paymentSuccess: "Demomakse tehtud ja ligipääs uuendatud.",
+    paymentHint: "See maksevorm on turvaline demo, mida kasutatakse pakettide ligipääsu näitamiseks FitNestis.",
+    paymentIncomplete: "Täida enne demomakse vorm.",
+    lockedCount: "lukus",
+    sessionDetailsSoon: "Treeningu kirjeldus lisandub peagi.",
+    loadingApp: "FitNest avaneb…",
+    signedOut: "Oled välja logitud.",
+    refreshSuccess: "Sinu FitNesti sisu on värskendatud.",
+    loginSuccess: "Tere tagasi FitNesti.",
+    registerSuccess: "Sinu FitNesti konto on valmis.",
   },
 };
 
@@ -314,6 +398,109 @@ function matchesQuery(values: Array<string | number | null | undefined>, normali
   }
 
   return values.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
+}
+
+function extractYouTubeId(url: string | null | undefined) {
+  if (!url) {
+    return null;
+  }
+
+  const watchMatch = url.match(/[?&]v=([^?&/]+)/i);
+  const shortMatch = url.match(/youtu\.be\/([^?&/]+)/i);
+  const embedMatch = url.match(/embed\/([^?&/]+)/i);
+  const shortsMatch = url.match(/shorts\/([^?&/]+)/i);
+
+  return watchMatch?.[1] ?? shortMatch?.[1] ?? embedMatch?.[1] ?? shortsMatch?.[1] ?? null;
+}
+
+function getYouTubeThumbnail(url: string | null | undefined) {
+  const videoId = extractYouTubeId(url);
+  return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null;
+}
+
+function getAccessTierFromPlanName(planName: string | null | undefined): AccessTier {
+  const normalized = (planName ?? "").toLowerCase();
+
+  if (normalized.includes("full")) {
+    return "full";
+  }
+
+  if (normalized.includes("active")) {
+    return "active";
+  }
+
+  if (normalized.includes("starter")) {
+    return "starter";
+  }
+
+  return "starter";
+}
+
+function getAccessRank(tier: AccessTier) {
+  return {
+    none: 0,
+    starter: 1,
+    active: 2,
+    full: 3,
+  }[tier];
+}
+
+function getVideoAccessTier(video: Video): AccessTier {
+  const categoryName = video.category?.categoryName?.toLowerCase() ?? "";
+
+  if (categoryName.includes("strength")) {
+    return "full";
+  }
+
+  if (categoryName.includes("cardio") || categoryName.includes("mobility")) {
+    return "active";
+  }
+
+  return "starter";
+}
+
+function canAccessTier(currentTier: AccessTier, requiredTier: AccessTier) {
+  return getAccessRank(currentTier) >= getAccessRank(requiredTier);
+}
+
+function getAccessTierLabel(tier: AccessTier, copySet: (typeof copy)["en"]) {
+  if (tier === "starter") {
+    return copySet.accessStarter;
+  }
+
+  if (tier === "active") {
+    return copySet.accessActive;
+  }
+
+  if (tier === "full") {
+    return copySet.accessFull;
+  }
+
+  return copySet.accessNone;
+}
+
+function getPlanHighlights(tier: AccessTier, language: Language) {
+  if (language === "et") {
+    if (tier === "starter") {
+      return ["Taastumine ja jooga", "Rahulik algus nädalasse", "Põhiline videoteek"];
+    }
+
+    if (tier === "active") {
+      return ["Kõik Starter treeningud", "Cardio ja liikuvus", "Tõhusamad nädalaplaanid"];
+    }
+
+    return ["Kõik treeningud", "Jõutreeningud ja täielik ligipääs", "Piiramatu FitNest kogemus"];
+  }
+
+  if (tier === "starter") {
+    return ["Recovery and yoga", "Gentle start to the week", "Core video access"];
+  }
+
+  if (tier === "active") {
+    return ["Everything in Starter", "Cardio and mobility", "Stronger weekly routine"];
+  }
+
+  return ["All workouts", "Strength sessions and full access", "Unlimited FitNest experience"];
 }
 
 function StatCard({ label, value }: { label: string; value: number }) {
@@ -404,17 +591,44 @@ function App() {
   const [editingPackageId, setEditingPackageId] = useState<number | null>(null);
   const [editingVideoId, setEditingVideoId] = useState<number | null>(null);
   const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [activeVideo, setActiveVideo] = useState<Video | null>(null);
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>(initialCategoryForm);
   const [trainerForm, setTrainerForm] = useState<TrainerFormState>(initialTrainerForm);
   const [packageForm, setPackageForm] = useState<PackageFormState>(initialPackageForm);
   const [videoForm, setVideoForm] = useState<VideoFormState>(initialVideoForm);
   const [userForm, setUserForm] = useState<UserFormState>(initialUserForm);
+  const [checkoutPlanId, setCheckoutPlanId] = useState<number | null>(null);
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentForm, setPaymentForm] = useState<PaymentFormState>(initialPaymentForm);
 
   const t = copy[language];
   const isAdmin = user?.role === "ADMIN";
   const activePlaylist = playlists.find((playlist) => playlist.playlistId === activePlaylistId) ?? null;
+  const userSubscriptions = user
+    ? subscriptions.filter((subscription) => subscription.userId === user.userId)
+    : [];
+  const currentAccessTier = isAdmin
+    ? "full"
+    : userSubscriptions.reduce<AccessTier>((highestTier, subscription) => {
+        const planTier = getAccessTierFromPlanName(subscription.plan?.planName);
+        return getAccessRank(planTier) > getAccessRank(highestTier) ? planTier : highestTier;
+      }, "none");
+  const currentAccessPlan =
+    currentAccessTier === "none"
+      ? null
+      : userSubscriptions
+          .map((subscription) => subscription.plan)
+          .filter((plan): plan is SubscriptionPlan => Boolean(plan))
+          .sort(
+            (left, right) =>
+              getAccessRank(getAccessTierFromPlanName(right.planName)) -
+              getAccessRank(getAccessTierFromPlanName(left.planName)),
+          )[0] ?? null;
   const currentPageLabel = t.nav[currentPage as keyof typeof t.nav];
   const normalizedAdminSearch = adminSearch.trim().toLowerCase();
+  const selectedPlan = packages.find((subscriptionPlan) => subscriptionPlan.planId === checkoutPlanId) ?? null;
+  const availableVideosCount = videos.filter((video) => canAccessTier(currentAccessTier, getVideoAccessTier(video))).length;
+  const activeVideoId = extractYouTubeId(activeVideo?.videoURL);
   const adminSections: Array<{
     id: AdminSection;
     title: string;
@@ -504,6 +718,39 @@ function App() {
     }
   }, [currentPage, isAdmin]);
 
+  useEffect(() => {
+    if (!user && currentPage !== "overview") {
+      setCurrentPage("overview");
+    }
+  }, [currentPage, user]);
+
+  useEffect(() => {
+    if (!activeVideo) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setActiveVideo(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeVideo]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    setPaymentForm((current) => ({
+      ...current,
+      email: current.email || user.email,
+      cardholder: current.cardholder || user.name,
+    }));
+  }, [user]);
+
   async function restoreSession() {
     setBooting(true);
 
@@ -588,12 +835,13 @@ function App() {
     setUsers([]);
     setSelectedVideoIds([]);
     setActivePlaylistId(null);
+    setActiveVideo(null);
     setCurrentPage("overview");
 
     if (showMessage) {
       setBanner({
         type: "success",
-        text: "Session cleared on the client side.",
+        text: t.signedOut,
       });
     }
   }
@@ -623,7 +871,7 @@ function App() {
       setCurrentPage("library");
       setBanner({
         type: "success",
-        text: result.message,
+        text: authMode === "login" ? t.loginSuccess : t.registerSuccess,
       });
     } catch (error) {
       setBanner({
@@ -655,11 +903,21 @@ function App() {
     await Promise.all([loadProtectedData(user), loadVideos()]);
     setBanner({
       type: "success",
-      text: "Data refreshed.",
+      text: t.refreshSuccess,
     });
   }
 
   function toggleSelectedVideo(videoId: number) {
+    const video = videos.find((entry) => entry.videoId === videoId);
+
+    if (video && !canAccessTier(currentAccessTier, getVideoAccessTier(video))) {
+      setBanner({
+        type: "error",
+        text: `${t.unlockThisVideo}: ${getAccessTierLabel(getVideoAccessTier(video), t)}`,
+      });
+      return;
+    }
+
     setSelectedVideoIds((current) =>
       current.includes(videoId)
         ? current.filter((id) => id !== videoId)
@@ -755,6 +1013,17 @@ function App() {
   }
 
   async function handleToggleVideoInPlaylist(videoId: number) {
+    const video = videos.find((entry) => entry.videoId === videoId);
+
+    if (video && !canAccessTier(currentAccessTier, getVideoAccessTier(video))) {
+      setBanner({
+        type: "error",
+        text: `${t.unlockThisVideo}: ${getAccessTierLabel(getVideoAccessTier(video), t)}`,
+      });
+      setCurrentPage("membership");
+      return;
+    }
+
     if (!activePlaylist) {
       setBanner({
         type: "error",
@@ -813,18 +1082,31 @@ function App() {
   }
 
   async function handleSubscribe(planId: number) {
+    if (!paymentForm.email.trim() || !paymentForm.cardholder.trim() || paymentForm.cardNumber.replace(/\s/g, "").length < 12) {
+      setBanner({
+        type: "error",
+        text: t.paymentIncomplete,
+      });
+      return;
+    }
+
+    setPaymentBusy(true);
+
     try {
       await api.subscriptions.create({ planId });
       setSubscriptions(await api.subscriptions.list());
+      setCheckoutPlanId(null);
       setBanner({
         type: "success",
-        text: "Subscription created successfully.",
+        text: t.paymentSuccess,
       });
     } catch (error) {
       setBanner({
         type: "error",
         text: error instanceof Error ? error.message : "Subscription failed.",
       });
+    } finally {
+      setPaymentBusy(false);
     }
   }
 
@@ -1171,7 +1453,7 @@ function App() {
       <main className="loading-screen">
         <div className="loading-card">
           <span className="section-eyebrow">{t.brand}</span>
-          <h1>Loading session…</h1>
+          <h1>{t.loadingApp}</h1>
         </div>
       </main>
     );
@@ -1185,7 +1467,7 @@ function App() {
       <header className="site-header">
         <div className="container header-shell">
           <button className="brand-lockup" type="button" onClick={() => setCurrentPage("overview")}>
-            <span className="brand-mark">TF</span>
+            <span className="brand-mark">FN</span>
             <span>
               <strong>{t.brand}</strong>
               <small>{t.tagline}</small>
@@ -1200,27 +1482,31 @@ function App() {
             >
               {t.nav.overview}
             </button>
-            <button
-              className={currentPage === "library" ? "nav-link active" : "nav-link"}
-              type="button"
-              onClick={() => setCurrentPage("library")}
-            >
-              {t.nav.library}
-            </button>
-            <button
-              className={currentPage === "playlists" ? "nav-link active" : "nav-link"}
-              type="button"
-              onClick={() => setCurrentPage("playlists")}
-            >
-              {t.nav.playlists}
-            </button>
-            <button
-              className={currentPage === "membership" ? "nav-link active" : "nav-link"}
-              type="button"
-              onClick={() => setCurrentPage("membership")}
-            >
-              {t.nav.membership}
-            </button>
+            {user ? (
+              <>
+                <button
+                  className={currentPage === "library" ? "nav-link active" : "nav-link"}
+                  type="button"
+                  onClick={() => setCurrentPage("library")}
+                >
+                  {t.nav.library}
+                </button>
+                <button
+                  className={currentPage === "playlists" ? "nav-link active" : "nav-link"}
+                  type="button"
+                  onClick={() => setCurrentPage("playlists")}
+                >
+                  {t.nav.playlists}
+                </button>
+                <button
+                  className={currentPage === "membership" ? "nav-link active" : "nav-link"}
+                  type="button"
+                  onClick={() => setCurrentPage("membership")}
+                >
+                  {t.nav.membership}
+                </button>
+              </>
+            ) : null}
             {isAdmin ? (
               <button
                 className={currentPage === "admin" ? "nav-link active" : "nav-link"}
@@ -1259,6 +1545,7 @@ function App() {
       </header>
 
       <main className="container main-layout">
+        {currentPage === "overview" ? (
         <section className="hero-panel">
           <div className="hero-copy">
             <span className="section-eyebrow">{t.heroEyebrow}</span>
@@ -1266,26 +1553,36 @@ function App() {
             <p>{t.heroText}</p>
             <div className="hero-actions">
               {user ? (
-                <button className="primary-button" type="button" onClick={handleRefresh} disabled={loadingData || loadingVideos}>
-                  {t.refresh}
-                </button>
+                <>
+                  <button className="primary-button" type="button" onClick={handleRefresh} disabled={loadingData || loadingVideos}>
+                    {t.refresh}
+                  </button>
+                  <button className="secondary-button" type="button" onClick={() => setCurrentPage("library")}>
+                    {t.nav.library}
+                  </button>
+                </>
               ) : (
                 <button className="primary-button" type="button" onClick={() => setAuthMode("register")}>
                   {t.register}
                 </button>
               )}
-              <button className="secondary-button" type="button" onClick={() => setCurrentPage("library")}>
-                {t.nav.library}
-              </button>
             </div>
 
+            {user ? (
+              <div className="hero-member-chip">
+                <span>{t.accessLabel}</span>
+                <strong>{getAccessTierLabel(currentAccessTier, t)}</strong>
+              </div>
+            ) : null}
+
             <div className="stat-grid">
+              <StatCard label={t.availableNow} value={availableVideosCount} />
               <StatCard label={t.statsVideos} value={videos.length} />
               <StatCard label={t.statsTrainers} value={trainers.length} />
               <StatCard label={t.statsCategories} value={categories.length} />
               <StatCard label={t.statsPackages} value={packages.length} />
               <StatCard label={t.statsPlaylists} value={playlists.length} />
-              <StatCard label={t.statsSubscriptions} value={subscriptions.length} />
+              <StatCard label={t.statsSubscriptions} value={userSubscriptions.length} />
             </div>
           </div>
 
@@ -1312,6 +1609,9 @@ function App() {
                   <p>{user.email}</p>
                   <p>
                     {t.registerDate}: {formatDate(user.registerDate)}
+                  </p>
+                  <p>
+                    {t.accessLabel}: {getAccessTierLabel(currentAccessTier, t)}
                   </p>
                 </div>
               </div>
@@ -1382,6 +1682,13 @@ function App() {
             )}
           </aside>
         </section>
+        ) : null}
+
+        {banner && currentPage !== "overview" ? (
+          <div className={banner.type === "success" ? "banner success page-banner" : "banner error page-banner"}>
+            {banner.text}
+          </div>
+        ) : null}
 
         {!user ? (
           <section className="content-panel">
@@ -1402,48 +1709,80 @@ function App() {
             />
 
             <div className="overview-grid">
-              <article className="highlight-card">
+              <article className="highlight-card profile-highlight">
                 <span>{t.currentUser}</span>
                 <strong>{user.name}</strong>
                 <p>{user.email}</p>
+                <div className="row-meta">
+                  <span>{getAccessTierLabel(currentAccessTier, t)}</span>
+                  <span>{t.registerDate}: {formatDate(user.registerDate)}</span>
+                </div>
               </article>
               <article className="highlight-card">
-                <span>{t.statsPlaylists}</span>
-                <strong>{playlists.length}</strong>
-                <p>{activePlaylist ? activePlaylist.playlistName : t.noPlaylists}</p>
+                <span>{t.accessLabel}</span>
+                <strong>{getAccessTierLabel(currentAccessTier, t)}</strong>
+                <p>{currentAccessPlan?.planName ?? t.accessNone}</p>
               </article>
               <article className="highlight-card">
-                <span>{t.activeSubscriptions}</span>
-                <strong>{subscriptions.length}</strong>
+                <span>{t.availableNow}</span>
+                <strong>{availableVideosCount}</strong>
                 <p>
-                  {subscriptions[0]?.plan?.planName
-                    ? `${subscriptions[0].plan.planName} • ${formatDate(subscriptions[0].startDate)}`
-                    : t.noSubscriptions}
+                  {availableVideosCount === videos.length
+                    ? t.accessFull
+                    : `${videos.length - availableVideosCount} ${t.lockedCount}`}
                 </p>
               </article>
             </div>
 
             <div className="split-grid">
               <article className="data-card">
-                <h3>{t.nav.library}</h3>
+                <h3>{t.profileFocus}</h3>
                 <div className="mini-list">
-                  {videos.slice(0, 5).map((video) => (
+                  {videos
+                    .filter((video) => canAccessTier(currentAccessTier, getVideoAccessTier(video)))
+                    .slice(0, 5)
+                    .map((video) => (
                     <div className="mini-list-row" key={video.videoId}>
                       <strong>{video.title}</strong>
-                      <span>{video.trainer?.trainerName ?? "—"}</span>
+                      <span>{video.trainer?.trainerName ?? t.noTrainer}</span>
                     </div>
                   ))}
                 </div>
               </article>
               <article className="data-card">
-                <h3>{t.nav.membership}</h3>
+                <h3>{t.nextBestPlan}</h3>
                 <div className="mini-list">
-                  {packages.slice(0, 5).map((subscriptionPlan) => (
-                    <div className="mini-list-row" key={subscriptionPlan.planId}>
-                      <strong>{subscriptionPlan.planName}</strong>
-                      <span>{formatPrice(subscriptionPlan.price)}</span>
+                  {packages
+                    .filter(
+                      (subscriptionPlan) =>
+                        getAccessRank(getAccessTierFromPlanName(subscriptionPlan.planName)) >
+                        getAccessRank(currentAccessTier),
+                    )
+                    .slice(0, 3)
+                    .map((subscriptionPlan) => (
+                      <button
+                        className="mini-list-row mini-list-row-button"
+                        key={subscriptionPlan.planId}
+                        type="button"
+                        onClick={() => {
+                          setCheckoutPlanId(subscriptionPlan.planId);
+                          setCurrentPage("membership");
+                        }}
+                      >
+                        <strong>{subscriptionPlan.planName}</strong>
+                        <span>{formatPrice(subscriptionPlan.price)}</span>
+                      </button>
+                    ))}
+                  {packages.filter(
+                    (subscriptionPlan) =>
+                      getAccessRank(getAccessTierFromPlanName(subscriptionPlan.planName)) >
+                      getAccessRank(currentAccessTier),
+                  ).length === 0 ? (
+                    <div className="mini-list-row">
+                      <strong>{t.accessFull}</strong>
+                      <span>{t.availableNow}</span>
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               </article>
             </div>
@@ -1511,41 +1850,89 @@ function App() {
 
             <div className="video-grid">
               {videos.length ? (
-                videos.map((video) => (
-                  <article className="video-card" key={video.videoId}>
-                    <div className="video-meta-top">
-                      <span>{video.category?.categoryName ?? "No category"}</span>
-                      <span>{video.duration ? `${video.duration} min` : "—"}</span>
-                    </div>
-                    <h3>{video.title}</h3>
-                    <p>{video.shortDescription ?? "No description yet."}</p>
-                    <div className="video-tags">
-                      <span>{video.trainer?.trainerName ?? "No trainer"}</span>
-                      <span>{video.language ?? "No language"}</span>
-                      <span>{video.equipment ?? "No equipment"}</span>
-                    </div>
-                    <div className="video-actions">
-                      <label className="checkbox-chip">
-                        <input
-                          checked={selectedVideoIds.includes(video.videoId)}
-                          type="checkbox"
-                          onChange={() => toggleSelectedVideo(video.videoId)}
-                        />
-                        <span>{t.selectedVideos}</span>
-                      </label>
-                      <button className="small-action" type="button" onClick={() => handleToggleVideoInPlaylist(video.videoId)}>
-                        {videoIsInActivePlaylist(video.videoId)
-                          ? t.removeFromPlaylist
-                          : t.addToPlaylist}
-                      </button>
-                      {video.videoURL ? (
-                        <a className="small-link" href={video.videoURL} rel="noreferrer" target="_blank">
-                          Open video
-                        </a>
-                      ) : null}
-                    </div>
-                  </article>
-                ))
+                videos.map((video) => {
+                  const requiredTier = getVideoAccessTier(video);
+                  const unlocked = isAdmin || canAccessTier(currentAccessTier, requiredTier);
+                  const thumbnailUrl = getYouTubeThumbnail(video.videoURL);
+
+                  return (
+                    <article className={unlocked ? "video-card" : "video-card locked"} key={video.videoId}>
+                      <div className={`video-cover tier-${requiredTier}`}>
+                        {thumbnailUrl ? (
+                          <img alt={video.title} className="video-cover-image" loading="lazy" src={thumbnailUrl} />
+                        ) : null}
+                        <div className="video-cover-overlay">
+                          <span>{video.category?.categoryName ?? t.noCategory}</span>
+                          <span>{getAccessTierLabel(requiredTier, t)}</span>
+                        </div>
+                        <div className="video-cover-copy">
+                          <strong>{video.title}</strong>
+                          <p>{video.trainer?.trainerName ?? t.noTrainer}</p>
+                        </div>
+                        {!unlocked ? (
+                          <div className="video-lock-layer">
+                            <strong>{t.accessNeeded}</strong>
+                            <p>{getAccessTierLabel(requiredTier, t)}</p>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="video-meta-top">
+                        <span>{video.duration ? `${video.duration} min` : "—"}</span>
+                        <span>{video.language ?? t.noLanguage}</span>
+                      </div>
+                      <h3>{video.title}</h3>
+                      <p>{video.shortDescription ?? t.sessionDetailsSoon}</p>
+                      <div className="video-tags">
+                        <span>{video.trainer?.trainerName ?? t.noTrainer}</span>
+                        <span>{video.equipment ?? t.noEquipment}</span>
+                      </div>
+                      <div className="video-actions">
+                        <label className={unlocked ? "checkbox-chip" : "checkbox-chip disabled"}>
+                          <input
+                            checked={selectedVideoIds.includes(video.videoId)}
+                            disabled={!unlocked}
+                            type="checkbox"
+                            onChange={() => toggleSelectedVideo(video.videoId)}
+                          />
+                          <span>{t.selectedVideos}</span>
+                        </label>
+                        {unlocked ? (
+                          <>
+                            <button className="small-action" type="button" onClick={() => handleToggleVideoInPlaylist(video.videoId)}>
+                              {videoIsInActivePlaylist(video.videoId)
+                                ? t.removeFromPlaylist
+                                : t.addToPlaylist}
+                            </button>
+                            {video.videoURL ? (
+                              <button
+                                className="small-link"
+                                type="button"
+                                onClick={() => setActiveVideo(video)}
+                              >
+                                {t.watchNow}
+                              </button>
+                            ) : null}
+                          </>
+                        ) : (
+                          <button
+                            className="small-action"
+                            type="button"
+                            onClick={() => {
+                              const suggestedPlan = packages.find(
+                                (subscriptionPlan) =>
+                                  getAccessTierFromPlanName(subscriptionPlan.planName) === requiredTier,
+                              );
+                              setCheckoutPlanId(suggestedPlan?.planId ?? null);
+                              setCurrentPage("membership");
+                            }}
+                          >
+                            {t.unlockThisVideo}
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })
               ) : (
                 <article className="empty-card">{t.noVideos}</article>
               )}
@@ -1574,7 +1961,9 @@ function App() {
                   <span>{t.selectedVideos}</span>
                   <p>
                     {selectedVideoIds.length
-                      ? selectedVideoIds.join(", ")
+                      ? selectedVideoIds
+                          .map((videoId) => videos.find((video) => video.videoId === videoId)?.title ?? String(videoId))
+                          .join(", ")
                       : t.emptySelection}
                   </p>
                 </div>
@@ -1665,41 +2054,121 @@ function App() {
 
             <div className="plan-grid">
               {packages.map((subscriptionPlan) => (
-                <article className="plan-card" key={subscriptionPlan.planId}>
+                <article
+                  className={
+                    checkoutPlanId === subscriptionPlan.planId
+                      ? "plan-card plan-card-selected"
+                      : "plan-card"
+                  }
+                  key={subscriptionPlan.planId}
+                >
                   <span>{subscriptionPlan.planName}</span>
                   <strong>{formatPrice(subscriptionPlan.price)}</strong>
-                  <p>{subscriptionPlan.durationMonths} months</p>
-                  <button className="primary-button wide" type="button" onClick={() => handleSubscribe(subscriptionPlan.planId)}>
-                    {t.subscribe}
+                  <p>{subscriptionPlan.durationMonths} {t.durationMonths.toLowerCase()}</p>
+                  <div className="plan-feature-list">
+                    {getPlanHighlights(
+                      getAccessTierFromPlanName(subscriptionPlan.planName),
+                      language,
+                    ).map((item) => (
+                      <div className="plan-feature" key={item}>
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    className="secondary-button wide"
+                    type="button"
+                    onClick={() => setCheckoutPlanId(subscriptionPlan.planId)}
+                  >
+                    {checkoutPlanId === subscriptionPlan.planId ? t.selectedPlan : t.selectPlan}
                   </button>
                 </article>
               ))}
             </div>
 
-            <div className="subscription-list">
-              <span className="list-label">{t.activeSubscriptions}</span>
-              {subscriptions.length ? (
-                subscriptions.map((subscription) => (
-                  <article className="subscription-card" key={subscription.userSubscriptionId}>
-                    <div>
-                      <strong>{subscription.plan?.planName ?? "Plan"}</strong>
-                      <p>
-                        {formatDate(subscription.startDate)}
-                        {subscription.user?.email ? ` • ${subscription.user.email}` : ""}
-                      </p>
-                    </div>
-                    <button
-                      className="small-action danger"
-                      type="button"
-                      onClick={() => handleDeleteSubscription(subscription.userSubscriptionId)}
-                    >
-                      {t.delete}
-                    </button>
-                  </article>
-                ))
-              ) : (
-                <article className="empty-card">{t.noSubscriptions}</article>
-              )}
+            <div className="split-grid membership-checkout-grid">
+              <article className="data-card checkout-card">
+                <SectionHeader
+                  eyebrow={t.simulatedCheckoutTitle}
+                  title={selectedPlan ? selectedPlan.planName : t.selectedPlan}
+                  text={t.simulatedCheckoutText}
+                />
+                <div className="selection-box">
+                  <span>{t.accessLabel}</span>
+                  <p>{getAccessTierLabel(currentAccessTier, t)}</p>
+                </div>
+                <div className="selection-box">
+                  <span>{t.packageIncludes}</span>
+                  <p>
+                    {selectedPlan
+                      ? getPlanHighlights(getAccessTierFromPlanName(selectedPlan.planName), language).join(" • ")
+                      : "—"}
+                  </p>
+                </div>
+                <Field label={t.paymentEmail}>
+                  <input
+                    type="text"
+                    value={paymentForm.email}
+                    onChange={(event) =>
+                      setPaymentForm((current) => ({ ...current, email: event.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label={t.paymentCardholder}>
+                  <input
+                    type="text"
+                    value={paymentForm.cardholder}
+                    onChange={(event) =>
+                      setPaymentForm((current) => ({ ...current, cardholder: event.target.value }))
+                    }
+                  />
+                </Field>
+                <Field label={t.paymentCardNumber}>
+                  <input
+                    type="text"
+                    value={paymentForm.cardNumber}
+                    onChange={(event) =>
+                      setPaymentForm((current) => ({ ...current, cardNumber: event.target.value }))
+                    }
+                  />
+                </Field>
+                <button
+                  className="primary-button wide"
+                  disabled={!selectedPlan || paymentBusy}
+                  type="button"
+                  onClick={() => {
+                    if (selectedPlan) {
+                      void handleSubscribe(selectedPlan.planId);
+                    }
+                  }}
+                >
+                  {paymentBusy ? "..." : t.subscribe}
+                </button>
+                <p className="muted-text">{t.paymentHint}</p>
+              </article>
+
+              <div className="subscription-list">
+                <span className="list-label">{t.activeSubscriptions}</span>
+                {userSubscriptions.length ? (
+                  userSubscriptions.map((subscription) => (
+                    <article className="subscription-card" key={subscription.userSubscriptionId}>
+                      <div>
+                        <strong>{subscription.plan?.planName ?? "Plan"}</strong>
+                        <p>{formatDate(subscription.startDate)}</p>
+                      </div>
+                      <button
+                        className="small-action danger"
+                        type="button"
+                        onClick={() => handleDeleteSubscription(subscription.userSubscriptionId)}
+                      >
+                        {t.delete}
+                      </button>
+                    </article>
+                  ))
+                ) : (
+                  <article className="empty-card">{t.noSubscriptions}</article>
+                )}
+              </div>
             </div>
           </section>
         ) : null}
@@ -1753,9 +2222,6 @@ function App() {
                     onChange={(event) => setAdminSearch(event.target.value)}
                   />
                 </Field>
-                <button className="small-action ghost" type="button" onClick={() => resetAdminEditor()}>
-                  {t.adminResetPanel}
-                </button>
               </div>
             </div>
 
@@ -2195,6 +2661,36 @@ function App() {
 
         {loadingData ? <p className="footer-note">Loading protected data…</p> : null}
       </main>
+
+      {activeVideo && activeVideoId ? (
+        <div
+          aria-modal="true"
+          className="video-modal-backdrop"
+          role="dialog"
+          onClick={() => setActiveVideo(null)}
+        >
+          <div className="video-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="video-modal-header">
+              <div>
+                <span className="section-eyebrow">{activeVideo.category?.categoryName ?? t.noCategory}</span>
+                <h3>{activeVideo.title}</h3>
+              </div>
+              <button className="small-action ghost" type="button" onClick={() => setActiveVideo(null)}>
+                {t.closeVideo}
+              </button>
+            </div>
+            <div className="video-frame-shell">
+              <iframe
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+                src={`https://www.youtube-nocookie.com/embed/${activeVideoId}?rel=0&modestbranding=1`}
+                title={activeVideo.title}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
