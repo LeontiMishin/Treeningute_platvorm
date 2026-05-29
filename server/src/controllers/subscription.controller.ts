@@ -13,6 +13,12 @@ const subscriptionInclude = {
   },
 };
 
+function addMonths(startDate: Date, months: number) {
+  const nextDate = new Date(startDate);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return nextDate;
+}
+
 export const listSubscriptions = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "Authentication is required.");
@@ -87,19 +93,55 @@ export const createSubscription = asyncHandler(async (req: Request, res: Respons
   }
 
   const startDate = body.startDate ?? new Date();
-  const createdRows = await prisma.$queryRaw<Array<{ subscription_id: number }>>`
-    SELECT public.sp_create_subscription(
-      ${targetUserId}::integer,
-      ${body.planId}::integer,
-      ${startDate}::timestamptz,
-      ${body.autoRenew ?? false}::boolean
-    ) AS subscription_id
-  `;
+  let subscriptionId: number | undefined;
 
-  const subscriptionId = createdRows[0]?.subscription_id;
+  try {
+    const createdRows = await prisma.$queryRaw<Array<{ subscription_id: number }>>`
+      SELECT public.sp_create_subscription(
+        ${targetUserId}::integer,
+        ${body.planId}::integer,
+        ${startDate}::timestamptz,
+        ${body.autoRenew ?? false}::boolean
+      ) AS subscription_id
+    `;
 
-  if (!subscriptionId) {
-    throw new ApiError(500, "Subscription payment could not be created.");
+    const rawSubscriptionId = createdRows[0]?.subscription_id;
+    subscriptionId = rawSubscriptionId ? Number(rawSubscriptionId) : undefined;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+
+    if (!message.includes("sp_create_subscription")) {
+      throw error;
+    }
+
+    const fallbackSubscription = await prisma.$transaction(async (transaction) => {
+      await transaction.userSubscription.updateMany({
+        where: {
+          userId: targetUserId,
+          status: "ACTIVE",
+        },
+        data: {
+          status: "SUPERSEDED",
+          autoRenew: false,
+        },
+      });
+
+      return transaction.userSubscription.create({
+        data: {
+          userId: targetUserId,
+          planId: body.planId,
+          startDate,
+          endDate: addMonths(startDate, subscriptionPlan.durationMonths),
+          autoRenew: body.autoRenew ?? false,
+          status: "ACTIVE",
+        },
+        select: {
+          userSubscriptionId: true,
+        },
+      });
+    });
+
+    subscriptionId = fallbackSubscription.userSubscriptionId;
   }
 
   const subscription = await prisma.userSubscription.findUniqueOrThrow({

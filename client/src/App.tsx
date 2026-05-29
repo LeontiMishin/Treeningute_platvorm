@@ -1,5 +1,45 @@
-import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { api, clearStoredToken, getStoredToken, setStoredToken } from "./api";
+import { copy } from "./appCopy";
+import {
+  initialCategoryForm,
+  initialPaymentForm,
+  initialPackageForm,
+  initialTrainerForm,
+  initialUserForm,
+  initialVideoForm,
+  pageIds,
+} from "./appDefaults";
+import {
+  canAccessTier,
+  extractYouTubeId,
+  formatDate,
+  formatPrice,
+  getAccessRank,
+  getAccessTierLabel,
+  getPlanAccessTier,
+  getPlanHighlights,
+  getVideoAccessTier,
+  getYouTubeThumbnail,
+  isoDateValue,
+  matchesQuery,
+  numberValue,
+} from "./appHelpers";
+import type {
+  AccessTier,
+  AdminSection,
+  AuthMode,
+  Banner,
+  CategoryFormState,
+  Language,
+  PackageFormState,
+  PageId,
+  PaymentFormState,
+  TrainerFormState,
+  UserFormState,
+  VideoFormState,
+} from "./appTypes";
+import { Field, SectionHeader, StatCard } from "./components/Common";
 import type {
   Category,
   Playlist,
@@ -9,564 +49,7 @@ import type {
   UserSubscription,
   Video,
 } from "./types";
-
-type Language = "en" | "et";
-type PageId = "overview" | "library" | "playlists" | "membership" | "admin";
-type AuthMode = "login" | "register";
-type AdminSection = "categories" | "trainers" | "packages" | "videos" | "users";
-type Banner = { type: "success" | "error"; text: string } | null;
-
-type CategoryFormState = {
-  categoryName: string;
-};
-
-type TrainerFormState = {
-  trainerName: string;
-  bio: string;
-  startDate: string;
-};
-
-type PackageFormState = {
-  planName: string;
-  price: string;
-  durationMonths: string;
-};
-
-type VideoFormState = {
-  title: string;
-  duration: string;
-  videoURL: string;
-  language: string;
-  equipment: string;
-  shortDescription: string;
-  trainerId: string;
-  categoryId: string;
-};
-
-type UserFormState = {
-  name: string;
-  email: string;
-  password: string;
-  roleCode: "ADMIN" | "USER";
-  accountStatus: "ACTIVE" | "SUSPENDED";
-  subscriptionPlanId: string;
-  autoRenew: boolean;
-};
-
-type AccessTier = "none" | "starter" | "active" | "full";
-
-type PaymentFormState = {
-  email: string;
-  cardholder: string;
-  cardNumber: string;
-};
-
-const pageIds: PageId[] = ["overview", "library", "playlists", "membership", "admin"];
-
-const initialCategoryForm: CategoryFormState = {
-  categoryName: "",
-};
-
-const initialTrainerForm: TrainerFormState = {
-  trainerName: "",
-  bio: "",
-  startDate: "",
-};
-
-const initialPackageForm: PackageFormState = {
-  planName: "",
-  price: "",
-  durationMonths: "1",
-};
-
-const initialVideoForm: VideoFormState = {
-  title: "",
-  duration: "",
-  videoURL: "",
-  language: "",
-  equipment: "",
-  shortDescription: "",
-  trainerId: "",
-  categoryId: "",
-};
-
-const initialUserForm: UserFormState = {
-  name: "",
-  email: "",
-  password: "",
-  roleCode: "USER",
-  accountStatus: "ACTIVE",
-  subscriptionPlanId: "",
-  autoRenew: false,
-};
-
-const initialPaymentForm: PaymentFormState = {
-  email: "",
-  cardholder: "",
-  cardNumber: "4242 4242 4242 4242",
-};
-
-const copy = {
-  en: {
-    brand: "FitNest",
-    tagline: "Strength, mobility, and calm routines for every day.",
-    nav: {
-      overview: "Overview",
-      library: "Library",
-      playlists: "Playlists",
-      membership: "Plans",
-      admin: "Admin",
-    },
-    heroEyebrow: "Daily movement",
-    heroTitle: "Build a home routine that feels focused, warm, and easy to return to.",
-    heroText:
-      "Explore guided strength, mobility, recovery, and yoga sessions. Save playlists, choose a plan, and unlock the training pace that fits your week.",
-    authTitle: "Account",
-    login: "Log in",
-    register: "Register",
-    logout: "Log out",
-    refresh: "Refresh data",
-    guestTitle: "Join FitNest",
-    guestText:
-      "Create an account to save playlists, unlock classes through plans, and keep your access in one place.",
-    authName: "Name",
-    authEmail: "Email",
-    authPassword: "Password",
-    authSubmitLogin: "Enter FitNest",
-    authSubmitRegister: "Create account",
-    overviewTitle: "Your training space",
-    overviewText: "See your access level, current plan, and the sessions that are ready for you right now.",
-    libraryTitle: "Workout library",
-    libraryText: "Browse classes by trainer, category, and the access level included in your plan.",
-    searchLabel: "Search",
-    searchPlaceholder: "Search by title or description",
-    trainerFilter: "Trainer",
-    categoryFilter: "Category",
-    allTrainers: "All trainers",
-    allCategories: "All categories",
-    noVideos: "No videos found for the current filters.",
-    playlistsTitle: "Your playlists",
-    playlistsText: "Build simple weekly collections, rename them anytime, and keep favourite sessions together.",
-    createPlaylist: "Create playlist",
-    playlistName: "Playlist name",
-    selectedVideos: "Selected videos for new playlist",
-    noPlaylists: "You do not have any playlists yet.",
-    membershipTitle: "Plans and checkout",
-    membershipText: "Choose a plan, simulate payment, and unlock the classes included in your access level.",
-    subscribe: "Confirm payment",
-    activeSubscriptions: "Active subscriptions",
-    noSubscriptions: "No subscriptions yet.",
-    adminTitle: "Studio admin",
-    adminText: "Manage categories, trainers, plans, videos, and members from one calm control room.",
-    categoryManager: "Category manager",
-    trainerManager: "Trainer manager",
-    packageManager: "Package manager",
-    videoManager: "Video manager",
-    userManager: "User manager",
-    adminWorkspaceHint: "Choose a resource and manage it from one focused control panel.",
-    adminSearchPlaceholder: "Search in the current admin section",
-    adminResetPanel: "Reset panel",
-    adminNoMatches: "No records match the current search.",
-    adminSelfDeleteBlocked: "Use the logout button instead of deleting the current admin account.",
-    save: "Save",
-    edit: "Edit",
-    delete: "Delete",
-    cancel: "Cancel",
-    duration: "Duration",
-    equipment: "Equipment",
-    language: "Language",
-    description: "Description",
-    videoUrl: "Video URL",
-    startDate: "Start date",
-    price: "Price",
-    durationMonths: "Duration months",
-    trainerBio: "Bio",
-    role: "Role",
-    accountStatus: "Account status",
-    registerDate: "Registered",
-    currentUser: "Current user",
-    roleAdmin: "Admin",
-    roleUser: "User",
-    statusActive: "Active",
-    statusSuspended: "Suspended",
-    assignPlan: "Add subscription",
-    currentPlan: "Current plan",
-    dashboardGuestCta: "Sign in to open your library, playlists, and paid access inside FitNest.",
-    adminOnly: "Admin tools are visible only for the admin account.",
-    choosePlaylist: "Active playlist",
-    addToPlaylist: "Add to active playlist",
-    removeFromPlaylist: "Remove from active playlist",
-    renamePlaylist: "Rename playlist",
-    videosInPlaylist: "Videos in playlist",
-    emptySelection: "No selected videos",
-    statsVideos: "Videos",
-    statsTrainers: "Trainers",
-    statsCategories: "Categories",
-    statsPackages: "Packages",
-    statsPlaylists: "Playlists",
-    statsSubscriptions: "Subscriptions",
-    watchNow: "Watch workout",
-    unlockThisVideo: "Unlock this workout",
-    simulatedCheckoutTitle: "Simulated checkout",
-    simulatedCheckoutText: "Use the demo payment form below to unlock the selected plan and show access changes inside the app.",
-    paymentEmail: "Payment email",
-    paymentCardholder: "Cardholder",
-    paymentCardNumber: "Card number",
-    selectPlan: "Choose plan",
-    selectedPlan: "Selected plan",
-    packageIncludes: "Includes",
-    accessLabel: "Current access",
-    accessNone: "No active plan",
-    accessStarter: "Starter access",
-    accessActive: "Active access",
-    accessFull: "Full access",
-    availableNow: "Available now",
-    accessNeeded: "Requires",
-    openMembership: "View plans",
-    closeVideo: "Close video",
-    noCategory: "No category",
-    noTrainer: "No trainer",
-    noLanguage: "No language",
-    noEquipment: "No equipment",
-    profileFocus: "Member focus",
-    nextBestPlan: "Recommended next step",
-    paymentSuccess: "Payment simulated and access updated.",
-    paymentHint: "This payment form is a safe demo used to show package access inside FitNest.",
-    paymentIncomplete: "Complete the simulated payment form first.",
-    lockedCount: "locked",
-    sessionDetailsSoon: "Session details coming soon.",
-    loadingApp: "Opening FitNest…",
-    signedOut: "You have been signed out.",
-    refreshSuccess: "Your FitNest content has been refreshed.",
-    loginSuccess: "Welcome back to FitNest.",
-    registerSuccess: "Your FitNest account is ready.",
-  },
-  et: {
-    brand: "FitNest",
-    tagline: "Jõud, liikuvus ja rahulik treeningurütm igaks päevaks.",
-    nav: {
-      overview: "Ülevaade",
-      library: "Videoteek",
-      playlists: "Pleilistid",
-      membership: "Paketid",
-      admin: "Admin",
-    },
-    heroEyebrow: "Igapäevane liikumine",
-    heroTitle: "Loo kodune treeningurutiin, kuhu on lihtne tagasi tulla.",
-    heroText:
-      "Avasta juhendatud jõu-, liikuvus-, taastumis- ja joogatunnid. Salvesta pleiliste, vali pakett ja ava just sinu nädalaga sobiv treeningutempo.",
-    authTitle: "Konto",
-    login: "Logi sisse",
-    register: "Registreeri",
-    logout: "Logi välja",
-    refresh: "Värskenda andmeid",
-    guestTitle: "Liitu FitNestiga",
-    guestText:
-      "Loo konto, et salvestada pleiliste, avada paketiga treeningud ja hoida kogu ligipääs ühes kohas.",
-    authName: "Nimi",
-    authEmail: "E-post",
-    authPassword: "Parool",
-    authSubmitLogin: "Sisene FitNesti",
-    authSubmitRegister: "Loo konto",
-    overviewTitle: "Sinu treeninguruum",
-    overviewText: "Vaata oma ligipääsutaset, aktiivset paketti ja treeninguid, mis on sulle praegu avatud.",
-    libraryTitle: "Treeningute videoteek",
-    libraryText: "Sirvi treeninguid treeneri, kategooria ja sinu paketis sisalduva ligipääsu järgi.",
-    searchLabel: "Otsing",
-    searchPlaceholder: "Otsi pealkirja või kirjelduse järgi",
-    trainerFilter: "Treener",
-    categoryFilter: "Kategooria",
-    allTrainers: "Kõik treenerid",
-    allCategories: "Kõik kategooriad",
-    noVideos: "Praeguste filtritega videoid ei leitud.",
-    playlistsTitle: "Sinu pleilistid",
-    playlistsText: "Koosta lihtsad nädalaplaanid, nimeta need ümber ja hoia lemmiktreeningud koos.",
-    createPlaylist: "Loo pleilist",
-    playlistName: "Pleilisti nimi",
-    selectedVideos: "Valitud videod uue pleilisti jaoks",
-    noPlaylists: "Sul ei ole veel ühtegi pleilisti.",
-    membershipTitle: "Paketid ja makse",
-    membershipText: "Vali pakett, tee demomakse ja ava selle ligipääsutasemega treeningud.",
-    subscribe: "Kinnita makse",
-    activeSubscriptions: "Aktiivsed tellimused",
-    noSubscriptions: "Tellimusi veel ei ole.",
-    adminTitle: "Stuudio admin",
-    adminText: "Halda kategooriaid, treenereid, pakette, videoid ja liikmeid ühest rahulikust juhtpaneelist.",
-    categoryManager: "Kategooriate haldus",
-    trainerManager: "Treenerite haldus",
-    packageManager: "Pakettide haldus",
-    videoManager: "Videote haldus",
-    userManager: "Kasutajate haldus",
-    adminWorkspaceHint: "Vali andmetüüp ja halda seda ühest keskendunud admin-paneelist.",
-    adminSearchPlaceholder: "Otsi aktiivsest admin-sektsioonist",
-    adminResetPanel: "Lähtesta paneel",
-    adminNoMatches: "Praeguse otsinguga sobivaid kirjeid ei leitud.",
-    adminSelfDeleteBlocked: "Kasuta väljalogimise nuppu, mitte ära kustuta aktiivset admin-kontot.",
-    save: "Salvesta",
-    edit: "Muuda",
-    delete: "Kustuta",
-    cancel: "Tühista",
-    duration: "Kestus",
-    equipment: "Varustus",
-    language: "Keel",
-    description: "Kirjeldus",
-    videoUrl: "Video URL",
-    startDate: "Alguskuupäev",
-    price: "Hind",
-    durationMonths: "Kuude arv",
-    trainerBio: "Tutvustus",
-    role: "Roll",
-    accountStatus: "Konto staatus",
-    registerDate: "Registreeritud",
-    currentUser: "Praegune kasutaja",
-    roleAdmin: "Admin",
-    roleUser: "Kasutaja",
-    statusActive: "Aktiivne",
-    statusSuspended: "Peatatud",
-    assignPlan: "Lisa tellimus",
-    currentPlan: "Praegune pakett",
-    dashboardGuestCta: "Logi sisse, et avada oma videoteek, pleilistid ja tasuline ligipääs FitNestis.",
-    adminOnly: "Admin tööriistad on nähtavad ainult admin-kontole.",
-    choosePlaylist: "Aktiivne pleilist",
-    addToPlaylist: "Lisa aktiivsesse pleilisti",
-    removeFromPlaylist: "Eemalda aktiivsest pleilistist",
-    renamePlaylist: "Muuda pleilisti nime",
-    videosInPlaylist: "Pleilistis olevad videod",
-    emptySelection: "Valitud videosid ei ole",
-    statsVideos: "Videod",
-    statsTrainers: "Treenerid",
-    statsCategories: "Kategooriad",
-    statsPackages: "Paketid",
-    statsPlaylists: "Pleilistid",
-    statsSubscriptions: "Tellimused",
-    watchNow: "Ava treening",
-    unlockThisVideo: "Ava see treening",
-    simulatedCheckoutTitle: "Demomakse",
-    simulatedCheckoutText: "Kasuta allolevat demo maksevormi, et avada valitud pakett ja näidata rakenduses ligipääsu muutust.",
-    paymentEmail: "Makse e-post",
-    paymentCardholder: "Kaardi omanik",
-    paymentCardNumber: "Kaardi number",
-    selectPlan: "Vali pakett",
-    selectedPlan: "Valitud pakett",
-    packageIncludes: "Sisaldab",
-    accessLabel: "Praegune ligipääs",
-    accessNone: "Aktiivne pakett puudub",
-    accessStarter: "Starter ligipääs",
-    accessActive: "Active ligipääs",
-    accessFull: "Täisligipääs",
-    availableNow: "Praegu saadaval",
-    accessNeeded: "Vajab",
-    openMembership: "Vaata pakette",
-    closeVideo: "Sulge video",
-    noCategory: "Kategooria puudub",
-    noTrainer: "Treener puudub",
-    noLanguage: "Keel puudub",
-    noEquipment: "Varustus puudub",
-    profileFocus: "Kasutaja fookus",
-    nextBestPlan: "Soovitatud järgmine samm",
-    paymentSuccess: "Demomakse tehtud ja ligipääs uuendatud.",
-    paymentHint: "See maksevorm on turvaline demo, mida kasutatakse pakettide ligipääsu näitamiseks FitNestis.",
-    paymentIncomplete: "Täida enne demomakse vorm.",
-    lockedCount: "lukus",
-    sessionDetailsSoon: "Treeningu kirjeldus lisandub peagi.",
-    loadingApp: "FitNest avaneb…",
-    signedOut: "Oled välja logitud.",
-    refreshSuccess: "Sinu FitNesti sisu on värskendatud.",
-    loginSuccess: "Tere tagasi FitNesti.",
-    registerSuccess: "Sinu FitNesti konto on valmis.",
-  },
-};
-
-function numberValue(value: string) {
-  return value ? Number(value) : undefined;
-}
-
-function isoDateValue(value: string) {
-  return value ? new Date(value).toISOString() : undefined;
-}
-
-function formatDate(value: string | null | undefined) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function formatPrice(value: number | string) {
-  const numeric = Number(value);
-
-  if (Number.isNaN(numeric)) {
-    return String(value);
-  }
-
-  return new Intl.NumberFormat("en-EE", {
-    style: "currency",
-    currency: "EUR",
-  }).format(numeric);
-}
-
-function matchesQuery(values: Array<string | number | null | undefined>, normalizedQuery: string) {
-  if (!normalizedQuery) {
-    return true;
-  }
-
-  return values.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
-}
-
-function extractYouTubeId(url: string | null | undefined) {
-  if (!url) {
-    return null;
-  }
-
-  const watchMatch = url.match(/[?&]v=([^?&/]+)/i);
-  const shortMatch = url.match(/youtu\.be\/([^?&/]+)/i);
-  const embedMatch = url.match(/embed\/([^?&/]+)/i);
-  const shortsMatch = url.match(/shorts\/([^?&/]+)/i);
-
-  return watchMatch?.[1] ?? shortMatch?.[1] ?? embedMatch?.[1] ?? shortsMatch?.[1] ?? null;
-}
-
-function getYouTubeThumbnail(url: string | null | undefined) {
-  const videoId = extractYouTubeId(url);
-  return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null;
-}
-
-function getAccessTierFromPlanName(planName: string | null | undefined): AccessTier {
-  const normalized = (planName ?? "").toLowerCase();
-
-  if (normalized.includes("full")) {
-    return "full";
-  }
-
-  if (normalized.includes("active")) {
-    return "active";
-  }
-
-  if (normalized.includes("starter")) {
-    return "starter";
-  }
-
-  return "starter";
-}
-
-function getAccessRank(tier: AccessTier) {
-  return {
-    none: 0,
-    starter: 1,
-    active: 2,
-    full: 3,
-  }[tier];
-}
-
-function getVideoAccessTier(video: Video): AccessTier {
-  const categoryName = video.category?.categoryName?.toLowerCase() ?? "";
-
-  if (categoryName.includes("strength")) {
-    return "full";
-  }
-
-  if (categoryName.includes("cardio") || categoryName.includes("mobility")) {
-    return "active";
-  }
-
-  return "starter";
-}
-
-function canAccessTier(currentTier: AccessTier, requiredTier: AccessTier) {
-  return getAccessRank(currentTier) >= getAccessRank(requiredTier);
-}
-
-function getAccessTierLabel(tier: AccessTier, copySet: (typeof copy)["en"]) {
-  if (tier === "starter") {
-    return copySet.accessStarter;
-  }
-
-  if (tier === "active") {
-    return copySet.accessActive;
-  }
-
-  if (tier === "full") {
-    return copySet.accessFull;
-  }
-
-  return copySet.accessNone;
-}
-
-function getPlanHighlights(tier: AccessTier, language: Language) {
-  if (language === "et") {
-    if (tier === "starter") {
-      return ["Taastumine ja jooga", "Rahulik algus nädalasse", "Põhiline videoteek"];
-    }
-
-    if (tier === "active") {
-      return ["Kõik Starter treeningud", "Cardio ja liikuvus", "Tõhusamad nädalaplaanid"];
-    }
-
-    return ["Kõik treeningud", "Jõutreeningud ja täielik ligipääs", "Piiramatu FitNest kogemus"];
-  }
-
-  if (tier === "starter") {
-    return ["Recovery and yoga", "Gentle start to the week", "Core video access"];
-  }
-
-  if (tier === "active") {
-    return ["Everything in Starter", "Cardio and mobility", "Stronger weekly routine"];
-  }
-
-  return ["All workouts", "Strength sessions and full access", "Unlimited FitNest experience"];
-}
-
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <article className="stat-card">
-      <strong>{value}</strong>
-      <span>{label}</span>
-    </article>
-  );
-}
-
-function SectionHeader({
-  eyebrow,
-  title,
-  text,
-  action,
-}: {
-  eyebrow: string;
-  title: string;
-  text?: string;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="section-header">
-      <div>
-        <span className="section-eyebrow">{eyebrow}</span>
-        <h2>{title}</h2>
-        {text ? <p>{text}</p> : null}
-      </div>
-      {action}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      {children}
-    </label>
-  );
-}
+import { AdminPanel } from "./components/AdminPanel";
 
 function App() {
   const [language, setLanguage] = useState<Language>(() => {
@@ -623,12 +106,14 @@ function App() {
   const isAdmin = user?.role === "ADMIN";
   const activePlaylist = playlists.find((playlist) => playlist.playlistId === activePlaylistId) ?? null;
   const userSubscriptions = user
-    ? subscriptions.filter((subscription) => subscription.userId === user.userId)
+    ? subscriptions.filter(
+        (subscription) => subscription.userId === user.userId && subscription.status === "ACTIVE",
+      )
     : [];
   const currentAccessTier = isAdmin
     ? "full"
     : userSubscriptions.reduce<AccessTier>((highestTier, subscription) => {
-        const planTier = getAccessTierFromPlanName(subscription.plan?.planName);
+        const planTier = getPlanAccessTier(subscription.plan);
         return getAccessRank(planTier) > getAccessRank(highestTier) ? planTier : highestTier;
       }, "none");
   const currentAccessPlan =
@@ -639,8 +124,8 @@ function App() {
           .filter((plan): plan is SubscriptionPlan => Boolean(plan))
           .sort(
             (left, right) =>
-              getAccessRank(getAccessTierFromPlanName(right.planName)) -
-              getAccessRank(getAccessTierFromPlanName(left.planName)),
+              getAccessRank(getPlanAccessTier(right)) -
+              getAccessRank(getPlanAccessTier(left)),
           )[0] ?? null;
   const currentPageLabel = t.nav[currentPage as keyof typeof t.nav];
   const normalizedAdminSearch = adminSearch.trim().toLowerCase();
@@ -1197,8 +682,7 @@ function App() {
       email: nextUser.email,
       password: "",
       roleCode: nextUser.role,
-      accountStatus:
-        nextUser.accountStatus === "SUSPENDED" ? "SUSPENDED" : "ACTIVE",
+      accountStatus: nextUser.accountStatus === "BLOCKED" ? "BLOCKED" : "ACTIVE",
       subscriptionPlanId: "",
       autoRenew: false,
     });
@@ -1827,7 +1311,7 @@ function App() {
                   {packages
                     .filter(
                       (subscriptionPlan) =>
-                        getAccessRank(getAccessTierFromPlanName(subscriptionPlan.planName)) >
+                        getAccessRank(getPlanAccessTier(subscriptionPlan)) >
                         getAccessRank(currentAccessTier),
                     )
                     .slice(0, 3)
@@ -1847,7 +1331,7 @@ function App() {
                     ))}
                   {packages.filter(
                     (subscriptionPlan) =>
-                      getAccessRank(getAccessTierFromPlanName(subscriptionPlan.planName)) >
+                      getAccessRank(getPlanAccessTier(subscriptionPlan)) >
                       getAccessRank(currentAccessTier),
                   ).length === 0 ? (
                     <div className="mini-list-row">
@@ -1992,7 +1476,7 @@ function App() {
                             onClick={() => {
                               const suggestedPlan = packages.find(
                                 (subscriptionPlan) =>
-                                  getAccessTierFromPlanName(subscriptionPlan.planName) === requiredTier,
+                                  getPlanAccessTier(subscriptionPlan) === requiredTier,
                               );
                               setCheckoutPlanId(suggestedPlan?.planId ?? null);
                               setCurrentPage("membership");
@@ -2139,7 +1623,7 @@ function App() {
                   <p>{subscriptionPlan.durationMonths} {t.durationMonths.toLowerCase()}</p>
                   <div className="plan-feature-list">
                     {getPlanHighlights(
-                      getAccessTierFromPlanName(subscriptionPlan.planName),
+                      getPlanAccessTier(subscriptionPlan),
                       language,
                     ).map((item) => (
                       <div className="plan-feature" key={item}>
@@ -2173,7 +1657,7 @@ function App() {
                   <span>{t.packageIncludes}</span>
                   <p>
                     {selectedPlan
-                      ? getPlanHighlights(getAccessTierFromPlanName(selectedPlan.planName), language).join(" • ")
+                      ? getPlanHighlights(getPlanAccessTier(selectedPlan), language).join(" • ")
                       : "—"}
                   </p>
                 </div>
@@ -2246,561 +1730,62 @@ function App() {
         ) : null}
 
         {user && currentPage === "admin" ? (
-          <section className="content-panel">
-            <SectionHeader
-              eyebrow={t.nav.admin}
-              title={t.adminTitle}
-              text={`${t.adminText} ${t.adminWorkspaceHint}`}
-            />
-
-            <div className="admin-overview-grid">
-              {adminSections.map((section) => (
-                <button
-                  key={section.id}
-                  className={adminSection === section.id ? "admin-summary-card active" : "admin-summary-card"}
-                  type="button"
-                  onClick={() => setAdminWorkspace(section.id)}
-                >
-                  <span>{section.title}</span>
-                  <strong>{section.count}</strong>
-                </button>
-              ))}
-            </div>
-
-            <div className="admin-switcher">
-              {adminSections.map((section) => (
-                <button
-                  key={section.id}
-                  className={adminSection === section.id ? "admin-switch active" : "admin-switch"}
-                  type="button"
-                  onClick={() => setAdminWorkspace(section.id)}
-                >
-                  {section.title}
-                </button>
-              ))}
-            </div>
-
-            <div className="admin-toolbar">
-              <div className="admin-toolbar-copy">
-                <span className="section-eyebrow">{activeAdminSection.title}</span>
-                <p>{t.adminWorkspaceHint}</p>
-              </div>
-              <div className="admin-toolbar-actions">
-                <Field label={t.searchLabel}>
-                  <input
-                    type="text"
-                    value={adminSearch}
-                    placeholder={t.adminSearchPlaceholder}
-                    onChange={(event) => setAdminSearch(event.target.value)}
-                  />
-                </Field>
-              </div>
-            </div>
-
-            <div className="admin-grid">
-              {adminSection === "categories" ? (
-              <article className="admin-card">
-                <h3>{t.categoryManager}</h3>
-                <Field label={t.categoryFilter}>
-                  <input
-                    type="text"
-                    value={categoryForm.categoryName}
-                    onChange={(event) =>
-                      setCategoryForm({
-                        categoryName: event.target.value,
-                      })
-                    }
-                  />
-                </Field>
-                <div className="card-actions">
-                  <button className="small-action" type="button" onClick={handleSaveCategory}>
-                    {t.save}
-                  </button>
-                  <button
-                    className="small-action ghost"
-                    type="button"
-                    onClick={() => {
-                      setEditingCategoryId(null);
-                      setCategoryForm(initialCategoryForm);
-                    }}
-                  >
-                    {t.cancel}
-                  </button>
-                  {editingCategoryId ? (
-                    <button className="small-action danger" type="button" onClick={() => handleDeleteCategory(editingCategoryId)}>
-                      {t.delete}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="mini-list">
-                  {filteredCategories.length ? (
-                    filteredCategories.map((category) => (
-                      <button
-                        className={editingCategoryId === category.categoryId ? "selectable-row active" : "selectable-row"}
-                        key={category.categoryId}
-                        type="button"
-                        onClick={() => fillCategoryForm(category)}
-                      >
-                        <strong>{category.categoryName}</strong>
-                        <div className="row-meta">
-                          <span>{videos.filter((video) => video.categoryId === category.categoryId).length} {t.statsVideos.toLowerCase()}</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
-                  )}
-                </div>
-              </article>
-              ) : null}
-
-              {adminSection === "trainers" ? (
-              <article className="admin-card">
-                <h3>{t.trainerManager}</h3>
-                <Field label={t.authName}>
-                  <input
-                    type="text"
-                    value={trainerForm.trainerName}
-                    onChange={(event) =>
-                      setTrainerForm((current) => ({ ...current, trainerName: event.target.value }))
-                    }
-                  />
-                </Field>
-                <Field label={t.trainerBio}>
-                  <textarea
-                    value={trainerForm.bio}
-                    onChange={(event) =>
-                      setTrainerForm((current) => ({ ...current, bio: event.target.value }))
-                    }
-                  />
-                </Field>
-                <Field label={t.startDate}>
-                  <input
-                    type="date"
-                    value={trainerForm.startDate}
-                    onChange={(event) =>
-                      setTrainerForm((current) => ({ ...current, startDate: event.target.value }))
-                    }
-                  />
-                </Field>
-                <div className="card-actions">
-                  <button className="small-action" type="button" onClick={handleSaveTrainer}>
-                    {t.save}
-                  </button>
-                  <button
-                    className="small-action ghost"
-                    type="button"
-                    onClick={() => {
-                      setEditingTrainerId(null);
-                      setTrainerForm(initialTrainerForm);
-                    }}
-                  >
-                    {t.cancel}
-                  </button>
-                  {editingTrainerId ? (
-                    <button className="small-action danger" type="button" onClick={() => handleDeleteTrainer(editingTrainerId)}>
-                      {t.delete}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="mini-list">
-                  {filteredTrainers.length ? (
-                    filteredTrainers.map((trainer) => (
-                      <button
-                        className={editingTrainerId === trainer.trainerId ? "selectable-row active" : "selectable-row"}
-                        key={trainer.trainerId}
-                        type="button"
-                        onClick={() => fillTrainerForm(trainer)}
-                      >
-                        <strong>{trainer.trainerName}</strong>
-                        <div className="row-meta">
-                          <span>{videos.filter((video) => video.trainerId === trainer.trainerId).length} {t.statsVideos.toLowerCase()}</span>
-                          <span>{formatDate(trainer.startDate)}</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
-                  )}
-                </div>
-              </article>
-              ) : null}
-
-              {adminSection === "packages" ? (
-              <article className="admin-card">
-                <h3>{t.packageManager}</h3>
-                <Field label={t.playlistName}>
-                  <input
-                    type="text"
-                    value={packageForm.planName}
-                    onChange={(event) =>
-                      setPackageForm((current) => ({ ...current, planName: event.target.value }))
-                    }
-                  />
-                </Field>
-                <Field label={t.price}>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={packageForm.price}
-                    onChange={(event) =>
-                      setPackageForm((current) => ({ ...current, price: event.target.value }))
-                    }
-                  />
-                </Field>
-                <Field label={t.durationMonths}>
-                  <input
-                    type="number"
-                    min="1"
-                    value={packageForm.durationMonths}
-                    onChange={(event) =>
-                      setPackageForm((current) => ({
-                        ...current,
-                        durationMonths: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
-                <div className="card-actions">
-                  <button className="small-action" type="button" onClick={handleSavePackage}>
-                    {t.save}
-                  </button>
-                  <button
-                    className="small-action ghost"
-                    type="button"
-                    onClick={() => {
-                      setEditingPackageId(null);
-                      setPackageForm(initialPackageForm);
-                    }}
-                  >
-                    {t.cancel}
-                  </button>
-                  {editingPackageId ? (
-                    <button className="small-action danger" type="button" onClick={() => handleDeletePackage(editingPackageId)}>
-                      {t.delete}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="mini-list">
-                  {filteredPackages.length ? (
-                    filteredPackages.map((subscriptionPlan) => (
-                      <button
-                        className={editingPackageId === subscriptionPlan.planId ? "selectable-row active" : "selectable-row"}
-                        key={subscriptionPlan.planId}
-                        type="button"
-                        onClick={() => fillPackageForm(subscriptionPlan)}
-                      >
-                        <strong>{subscriptionPlan.planName}</strong>
-                        <div className="row-meta">
-                          <span>{formatPrice(subscriptionPlan.price)}</span>
-                          <span>{subscriptionPlan.durationMonths} {t.durationMonths.toLowerCase()}</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
-                  )}
-                </div>
-              </article>
-              ) : null}
-
-              {adminSection === "videos" ? (
-              <article className="admin-card admin-card-wide">
-                <h3>{t.videoManager}</h3>
-                <div className="admin-form-grid">
-                  <Field label={t.authName}>
-                    <input
-                      type="text"
-                      value={videoForm.title}
-                      onChange={(event) =>
-                        setVideoForm((current) => ({ ...current, title: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.duration}>
-                    <input
-                      type="number"
-                      min="1"
-                      value={videoForm.duration}
-                      onChange={(event) =>
-                        setVideoForm((current) => ({ ...current, duration: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.videoUrl}>
-                    <input
-                      type="url"
-                      value={videoForm.videoURL}
-                      onChange={(event) =>
-                        setVideoForm((current) => ({ ...current, videoURL: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.language}>
-                    <input
-                      type="text"
-                      value={videoForm.language}
-                      onChange={(event) =>
-                        setVideoForm((current) => ({ ...current, language: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.equipment}>
-                    <input
-                      type="text"
-                      value={videoForm.equipment}
-                      onChange={(event) =>
-                        setVideoForm((current) => ({ ...current, equipment: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.trainerFilter}>
-                    <select
-                      value={videoForm.trainerId}
-                      onChange={(event) =>
-                        setVideoForm((current) => ({ ...current, trainerId: event.target.value }))
-                      }
-                    >
-                      <option value="">—</option>
-                      {trainers.map((trainer) => (
-                        <option key={trainer.trainerId} value={trainer.trainerId}>
-                          {trainer.trainerName}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label={t.categoryFilter}>
-                    <select
-                      value={videoForm.categoryId}
-                      onChange={(event) =>
-                        setVideoForm((current) => ({ ...current, categoryId: event.target.value }))
-                      }
-                    >
-                      <option value="">—</option>
-                      {categories.map((category) => (
-                        <option key={category.categoryId} value={category.categoryId}>
-                          {category.categoryName}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                </div>
-                <Field label={t.description}>
-                  <textarea
-                    value={videoForm.shortDescription}
-                    onChange={(event) =>
-                      setVideoForm((current) => ({
-                        ...current,
-                        shortDescription: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
-                <div className="card-actions">
-                  <button className="small-action" type="button" onClick={handleSaveVideo}>
-                    {t.save}
-                  </button>
-                  <button
-                    className="small-action ghost"
-                    type="button"
-                    onClick={() => {
-                      setEditingVideoId(null);
-                      setVideoForm(initialVideoForm);
-                    }}
-                  >
-                    {t.cancel}
-                  </button>
-                  {editingVideoId ? (
-                    <button className="small-action danger" type="button" onClick={() => handleDeleteVideo(editingVideoId)}>
-                      {t.delete}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="mini-list">
-                  {filteredVideos.length ? (
-                    filteredVideos.map((video) => (
-                      <button
-                        className={editingVideoId === video.videoId ? "selectable-row active" : "selectable-row"}
-                        key={video.videoId}
-                        type="button"
-                        onClick={() => fillVideoForm(video)}
-                      >
-                        <strong>{video.title}</strong>
-                        <div className="row-meta">
-                          <span>{video.trainer?.trainerName ?? "—"}</span>
-                          <span>{video.category?.categoryName ?? "—"}</span>
-                          <span>{video.duration ? `${video.duration} min` : "—"}</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
-                  )}
-                </div>
-              </article>
-              ) : null}
-
-              {adminSection === "users" ? (
-              <article className="admin-card admin-card-wide">
-                <h3>{t.userManager}</h3>
-                <div className="admin-form-grid">
-                  <Field label={t.authName}>
-                    <input
-                      type="text"
-                      value={userForm.name}
-                      onChange={(event) =>
-                        setUserForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.authEmail}>
-                    <input
-                      type="email"
-                      value={userForm.email}
-                      onChange={(event) =>
-                        setUserForm((current) => ({ ...current, email: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.authPassword}>
-                    <input
-                      type="password"
-                      value={userForm.password}
-                      onChange={(event) =>
-                        setUserForm((current) => ({ ...current, password: event.target.value }))
-                      }
-                    />
-                  </Field>
-                  <Field label={t.role}>
-                    <select
-                      value={userForm.roleCode}
-                      onChange={(event) =>
-                        setUserForm((current) => ({
-                          ...current,
-                          roleCode: event.target.value as UserFormState["roleCode"],
-                        }))
-                      }
-                    >
-                      <option value="USER">{t.roleUser}</option>
-                      <option value="ADMIN">{t.roleAdmin}</option>
-                    </select>
-                  </Field>
-                  <Field label={t.accountStatus}>
-                    <select
-                      value={userForm.accountStatus}
-                      onChange={(event) =>
-                        setUserForm((current) => ({
-                          ...current,
-                          accountStatus: event.target.value as UserFormState["accountStatus"],
-                        }))
-                      }
-                    >
-                      <option value="ACTIVE">{t.statusActive}</option>
-                      <option value="SUSPENDED">{t.statusSuspended}</option>
-                    </select>
-                  </Field>
-                </div>
-                <div className="admin-form-grid admin-form-grid-compact">
-                  <Field label={t.assignPlan}>
-                    <select
-                      value={userForm.subscriptionPlanId}
-                      onChange={(event) =>
-                        setUserForm((current) => ({
-                          ...current,
-                          subscriptionPlanId: event.target.value,
-                        }))
-                      }
-                    >
-                      <option value="">—</option>
-                      {packages.map((subscriptionPlan) => (
-                        <option key={subscriptionPlan.planId} value={subscriptionPlan.planId}>
-                          {subscriptionPlan.planName}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <label className="checkbox-chip admin-chip">
-                    <input
-                      checked={userForm.autoRenew}
-                      type="checkbox"
-                      onChange={(event) =>
-                        setUserForm((current) => ({
-                          ...current,
-                          autoRenew: event.target.checked,
-                        }))
-                      }
-                    />
-                    <span>Auto renew</span>
-                  </label>
-                </div>
-                <div className="selection-box admin-selection-box">
-                  <span>{t.currentPlan}</span>
-                  <p>
-                    {editingUserActiveSubscription?.plan?.planName ?? t.noSubscriptions}
-                  </p>
-                </div>
-                <div className="card-actions">
-                  <button
-                    className="small-action"
-                    disabled={!editingUserId}
-                    type="button"
-                    onClick={handleSaveUser}
-                  >
-                    {t.save}
-                  </button>
-                  <button
-                    className="small-action ghost"
-                    type="button"
-                    onClick={() => {
-                      setEditingUserId(null);
-                      setUserForm(initialUserForm);
-                    }}
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    className="small-action"
-                    disabled={!editingUserId || !userForm.subscriptionPlanId}
-                    type="button"
-                    onClick={handleAssignSubscriptionToUser}
-                  >
-                    {t.assignPlan}
-                  </button>
-                  {editingUserId ? (
-                    <button className="small-action danger" type="button" onClick={() => handleDeleteUser(editingUserId)}>
-                      {t.delete}
-                    </button>
-                  ) : null}
-                </div>
-                <div className="user-table">
-                  {filteredUsers.length ? (
-                    filteredUsers.map((listedUser) => (
-                      <button
-                        className={editingUserId === listedUser.userId ? "user-row active" : "user-row"}
-                        key={listedUser.userId}
-                        type="button"
-                        onClick={() => fillUserForm(listedUser)}
-                      >
-                        <strong>{listedUser.name}</strong>
-                        <span>{listedUser.email}</span>
-                        <div className="row-meta row-meta-end">
-                          <span>{listedUser.role}</span>
-                          <span>{listedUser.accountStatus ?? t.statusActive}</span>
-                          <span>
-                            {subscriptions.filter((subscription) => subscription.userId === listedUser.userId).length} {t.statsSubscriptions.toLowerCase()}
-                          </span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <article className="empty-card inline-empty">{t.adminNoMatches}</article>
-                  )}
-                </div>
-              </article>
-              ) : null}
-            </div>
-          </section>
+          <AdminPanel
+            t={t}
+            adminSections={adminSections}
+            activeAdminSection={activeAdminSection}
+            adminSection={adminSection}
+            setAdminWorkspace={setAdminWorkspace}
+            adminSearch={adminSearch}
+            setAdminSearch={setAdminSearch}
+            categories={categories}
+            trainers={trainers}
+            videos={videos}
+            packages={packages}
+            subscriptions={subscriptions}
+            filteredCategories={filteredCategories}
+            filteredTrainers={filteredTrainers}
+            filteredPackages={filteredPackages}
+            filteredVideos={filteredVideos}
+            filteredUsers={filteredUsers}
+            categoryForm={categoryForm}
+            setCategoryForm={setCategoryForm}
+            trainerForm={trainerForm}
+            setTrainerForm={setTrainerForm}
+            packageForm={packageForm}
+            setPackageForm={setPackageForm}
+            videoForm={videoForm}
+            setVideoForm={setVideoForm}
+            userForm={userForm}
+            setUserForm={setUserForm}
+            editingCategoryId={editingCategoryId}
+            setEditingCategoryId={setEditingCategoryId}
+            editingTrainerId={editingTrainerId}
+            setEditingTrainerId={setEditingTrainerId}
+            editingPackageId={editingPackageId}
+            setEditingPackageId={setEditingPackageId}
+            editingVideoId={editingVideoId}
+            setEditingVideoId={setEditingVideoId}
+            editingUserId={editingUserId}
+            setEditingUserId={setEditingUserId}
+            editingUserActiveSubscription={editingUserActiveSubscription}
+            fillCategoryForm={fillCategoryForm}
+            fillTrainerForm={fillTrainerForm}
+            fillPackageForm={fillPackageForm}
+            fillVideoForm={fillVideoForm}
+            fillUserForm={fillUserForm}
+            handleSaveCategory={handleSaveCategory}
+            handleDeleteCategory={handleDeleteCategory}
+            handleSaveTrainer={handleSaveTrainer}
+            handleDeleteTrainer={handleDeleteTrainer}
+            handleSavePackage={handleSavePackage}
+            handleDeletePackage={handleDeletePackage}
+            handleSaveVideo={handleSaveVideo}
+            handleDeleteVideo={handleDeleteVideo}
+            handleSaveUser={handleSaveUser}
+            handleAssignSubscriptionToUser={handleAssignSubscriptionToUser}
+            handleDeleteUser={handleDeleteUser}
+          />
         ) : null}
 
         {user && currentPage === "admin" && !isAdmin ? (

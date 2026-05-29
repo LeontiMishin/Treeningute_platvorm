@@ -280,12 +280,13 @@ async function ensureSchema() {
     END $$;
   `);
 
-  await exec(`CREATE INDEX IF NOT EXISTS idx_users_rolecode ON treeningute_platvorm.users(rolecode);`);
-  await exec(`CREATE INDEX IF NOT EXISTS idx_users_accountstatus ON treeningute_platvorm.users(accountstatus);`);
-  await exec(`CREATE INDEX IF NOT EXISTS idx_videos_filter ON treeningute_platvorm.videos(categoryid, trainerid);`);
-  await exec(`CREATE INDEX IF NOT EXISTS idx_videos_access_published ON treeningute_platvorm.videos(accesstier, publishedat DESC);`);
-  await exec(`CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON treeningute_platvorm.user_subscriptions(userid, status);`);
-  await exec(`CREATE INDEX IF NOT EXISTS idx_workout_completions_user_completedat ON treeningute_platvorm.workout_completions(userid, completedat DESC);`);
+  await exec(`CREATE INDEX IF NOT EXISTS users_rolecode_idx ON treeningute_platvorm.users(rolecode);`);
+  await exec(`CREATE INDEX IF NOT EXISTS users_accountstatus_idx ON treeningute_platvorm.users(accountstatus);`);
+  await exec(`CREATE INDEX IF NOT EXISTS videos_trainerid_categoryid_idx ON treeningute_platvorm.videos(trainerid, categoryid);`);
+  await exec(`CREATE INDEX IF NOT EXISTS videos_accesstier_publishedat_idx ON treeningute_platvorm.videos(accesstier, publishedat);`);
+  await exec(`CREATE INDEX IF NOT EXISTS user_subscriptions_userid_status_idx ON treeningute_platvorm.user_subscriptions(userid, status);`);
+  await exec(`CREATE INDEX IF NOT EXISTS workout_completions_userid_completedat_idx ON treeningute_platvorm.workout_completions(userid, completedat);`);
+  await exec(`CREATE INDEX IF NOT EXISTS workout_completions_videoid_completedat_idx ON treeningute_platvorm.workout_completions(videoid, completedat);`);
 
   await exec(`
     CREATE OR REPLACE VIEW treeningute_platvorm.member_access_overview AS
@@ -430,6 +431,50 @@ async function ensureSchema() {
     $function$;
   `);
 
+  await exec(`
+    CREATE OR REPLACE FUNCTION public.fn_total_workouts_completed(
+      p_user_id integer
+    )
+    RETURNS integer
+    LANGUAGE plpgsql
+    AS $function$
+    DECLARE
+      v_total integer;
+    BEGIN
+      SELECT COUNT(*)
+      INTO v_total
+      FROM treeningute_platvorm.workout_completions
+      WHERE userid = p_user_id;
+
+      RETURN COALESCE(v_total, 0);
+    END;
+    $function$;
+  `);
+
+  await exec(`
+    CREATE OR REPLACE FUNCTION public.sp_create_playlist(
+      p_user_id integer,
+      p_playlist_name text
+    )
+    RETURNS integer
+    LANGUAGE plpgsql
+    AS $function$
+    DECLARE
+      v_playlist_id integer;
+    BEGIN
+      IF TRIM(p_playlist_name) = '' THEN
+        RAISE EXCEPTION 'Playlist name cannot be empty';
+      END IF;
+
+      INSERT INTO treeningute_platvorm.playlists(playlistname, userid)
+      VALUES (p_playlist_name, p_user_id)
+      RETURNING playlistid INTO v_playlist_id;
+
+      RETURN v_playlist_id;
+    END;
+    $function$;
+  `);
+
   await exec(`DROP TRIGGER IF EXISTS trg_subscription_startdate ON treeningute_platvorm.user_subscriptions;`);
   await exec(`
     CREATE TRIGGER trg_subscription_startdate
@@ -550,8 +595,8 @@ async function seedTrainers(users: Awaited<ReturnType<typeof seedUsers>>) {
 async function seedPlans() {
   const plans = [
     { planName: "Starter 1 Month", price: 9.95, durationMonths: 1, accessTier: "STARTER", isActive: true, maxActivePrograms: 1 },
-    { planName: "Active 3 Months", price: 24.95, durationMonths: 3, accessTier: "ACTIVE", isActive: true, maxActivePrograms: 3 },
-    { planName: "Full Access 12 Months", price: 79.95, durationMonths: 12, accessTier: "FULL", isActive: true, maxActivePrograms: 10 },
+    { planName: "Active 3 Months", price: 24.95, durationMonths: 3, accessTier: "PLUS", isActive: true, maxActivePrograms: 3 },
+    { planName: "Full Access 12 Months", price: 79.95, durationMonths: 12, accessTier: "PRO", isActive: true, maxActivePrograms: 10 },
   ];
 
   for (const plan of plans) {
@@ -583,7 +628,7 @@ async function seedVideos(
       shortDescription: "A structured beginner strength session with low-impact progressions and clear technique cues.",
       trainerId: trainerByName["Sandra Kask"],
       categoryId: categoryByName.Strength,
-      accessTier: "FULL",
+      accessTier: "PRO",
       isFeatured: true,
     },
     {
@@ -595,7 +640,7 @@ async function seedVideos(
       shortDescription: "A steady full-body strength workout focused on compound movements and good form.",
       trainerId: trainerByName["Sandra Kask"],
       categoryId: categoryByName.Strength,
-      accessTier: "FULL",
+      accessTier: "PRO",
       isFeatured: false,
     },
     {
@@ -607,7 +652,7 @@ async function seedVideos(
       shortDescription: "A feel-good beginner cardio session that keeps impact low and movement quality high.",
       trainerId: trainerByName["Grete Saar"],
       categoryId: categoryByName.Cardio,
-      accessTier: "ACTIVE",
+      accessTier: "PLUS",
       isFeatured: true,
     },
     {
@@ -619,7 +664,7 @@ async function seedVideos(
       shortDescription: "A low-noise cardio routine that works well for apartments, dorms, and shared spaces.",
       trainerId: trainerByName["Grete Saar"],
       categoryId: categoryByName.Cardio,
-      accessTier: "ACTIVE",
+      accessTier: "PLUS",
       isFeatured: false,
     },
     {
@@ -631,7 +676,7 @@ async function seedVideos(
       shortDescription: "A short mixed session combining accessible cardio intervals with practical strength work.",
       trainerId: trainerByName["Grete Saar"],
       categoryId: categoryByName.Cardio,
-      accessTier: "ACTIVE",
+      accessTier: "PLUS",
       isFeatured: false,
     },
     {
@@ -643,7 +688,7 @@ async function seedVideos(
       shortDescription: "A mobility-focused class for hips, posture, and full-body range of motion.",
       trainerId: trainerByName["Rasmus Oja"],
       categoryId: categoryByName.Mobility,
-      accessTier: "ACTIVE",
+      accessTier: "PLUS",
       isFeatured: true,
     },
     {

@@ -1186,6 +1186,18 @@ textarea:focus {
   gap: 10px;
 }
 
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.row-actions-end {
+  justify-content: flex-end;
+}
+
 .row-meta span {
   display: inline-flex;
   align-items: center;
@@ -1210,7 +1222,7 @@ textarea:focus {
 
 .user-row {
   display: grid;
-  grid-template-columns: 1fr 1.2fr auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, auto) auto;
   gap: 14px;
   align-items: center;
 }
@@ -1242,6 +1254,9 @@ textarea:focus {
 .checkout-card p,
 .subscription-card p,
 .mini-list-row strong,
+.selectable-row strong,
+.user-row strong,
+.user-row span,
 .selection-box p {
   overflow-wrap: anywhere;
 }
@@ -1422,6 +1437,11 @@ textarea:focus {
   }
 
   .row-meta-end {
+    justify-content: flex-start;
+  }
+
+  .row-actions,
+  .row-actions-end {
     justify-content: flex-start;
   }
 }

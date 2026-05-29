@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 const intIdSchema = z.coerce.number().int().positive();
+const accountStatusSchema = z.enum(["ACTIVE", "BLOCKED"]);
+const accessTierSchema = z.enum(["STARTER", "PLUS", "PRO"]);
+const roleCodeSchema = z.enum(["USER", "ADMIN"]);
+const subscriptionStatusSchema = z.enum(["ACTIVE", "SUPERSEDED", "CANCELLED", "EXPIRED"]);
 
 const requireAtLeastOneField = (value: Record<string, unknown>) =>
   Object.values(value).some((entry) => entry !== undefined);
@@ -26,8 +30,8 @@ export const userUpdateSchema = z
     email: z.string().email().optional(),
     password: z.string().min(6).max(100).optional(),
     preferredLanguage: z.string().max(10).optional(),
-    accountStatus: z.string().max(30).optional(),
-    roleCode: z.string().max(30).optional(),
+    accountStatus: accountStatusSchema.optional(),
+    roleCode: roleCodeSchema.optional(),
   })
   .refine(requireAtLeastOneField, {
     message: "At least one field must be provided.",
@@ -61,7 +65,7 @@ export const videoCreateSchema = z.object({
   trainerId: intIdSchema.optional(),
   categoryId: intIdSchema.optional(),
   difficultyLevelId: intIdSchema.optional(),
-  accessTier: z.string().max(20).optional(),
+  accessTier: accessTierSchema.optional(),
   isFeatured: z.coerce.boolean().optional(),
 });
 
@@ -79,7 +83,7 @@ export const subscriptionPackageCreateSchema = z.object({
   planName: z.string().min(2).max(80),
   price: z.coerce.number().positive(),
   durationMonths: z.coerce.number().int().positive(),
-  accessTier: z.string().max(20).optional(),
+  accessTier: accessTierSchema.optional(),
   isActive: z.coerce.boolean().optional(),
   maxActivePrograms: z.coerce.number().int().positive().optional(),
 });
@@ -118,7 +122,7 @@ export const subscriptionUpdateSchema = z
     userId: intIdSchema.optional(),
     startDate: z.coerce.date().optional(),
     endDate: z.coerce.date().optional(),
-    status: z.string().max(20).optional(),
+    status: subscriptionStatusSchema.optional(),
     autoRenew: z.coerce.boolean().optional(),
   })
   .refine(requireAtLeastOneField, {

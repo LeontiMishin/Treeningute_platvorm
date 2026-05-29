@@ -1,20 +1,23 @@
-CREATE INDEX IF NOT EXISTS idx_users_rolecode
+CREATE INDEX IF NOT EXISTS users_rolecode_idx
   ON treeningute_platvorm.users(rolecode);
 
-CREATE INDEX IF NOT EXISTS idx_users_accountstatus
+CREATE INDEX IF NOT EXISTS users_accountstatus_idx
   ON treeningute_platvorm.users(accountstatus);
 
-CREATE INDEX IF NOT EXISTS idx_videos_filter
-  ON treeningute_platvorm.videos(categoryid, trainerid);
+CREATE INDEX IF NOT EXISTS videos_trainerid_categoryid_idx
+  ON treeningute_platvorm.videos(trainerid, categoryid);
 
-CREATE INDEX IF NOT EXISTS idx_videos_access_published
-  ON treeningute_platvorm.videos(accesstier, publishedat DESC);
+CREATE INDEX IF NOT EXISTS videos_accesstier_publishedat_idx
+  ON treeningute_platvorm.videos(accesstier, publishedat);
 
-CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status
+CREATE INDEX IF NOT EXISTS user_subscriptions_userid_status_idx
   ON treeningute_platvorm.user_subscriptions(userid, status);
 
-CREATE INDEX IF NOT EXISTS idx_workout_completions_user_completedat
-  ON treeningute_platvorm.workout_completions(userid, completedat DESC);
+CREATE INDEX IF NOT EXISTS workout_completions_userid_completedat_idx
+  ON treeningute_platvorm.workout_completions(userid, completedat);
+
+CREATE INDEX IF NOT EXISTS workout_completions_videoid_completedat_idx
+  ON treeningute_platvorm.workout_completions(videoid, completedat);
 
 CREATE OR REPLACE VIEW treeningute_platvorm.member_access_overview AS
 SELECT
@@ -181,6 +184,46 @@ BEGIN
   RETURNING workoutcompletionid INTO v_completion_id;
 
   RETURN v_completion_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.fn_total_workouts_completed(
+  p_user_id integer
+)
+RETURNS integer
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+  v_total integer;
+BEGIN
+  SELECT COUNT(*)
+  INTO v_total
+  FROM treeningute_platvorm.workout_completions
+  WHERE userid = p_user_id;
+
+  RETURN COALESCE(v_total, 0);
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.sp_create_playlist(
+  p_user_id integer,
+  p_playlist_name text
+)
+RETURNS integer
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+  v_playlist_id integer;
+BEGIN
+  IF TRIM(p_playlist_name) = '' THEN
+    RAISE EXCEPTION 'Playlist name cannot be empty';
+  END IF;
+
+  INSERT INTO treeningute_platvorm.playlists(playlistname, userid)
+  VALUES (p_playlist_name, p_user_id)
+  RETURNING playlistid INTO v_playlist_id;
+
+  RETURN v_playlist_id;
 END;
 $function$;
 

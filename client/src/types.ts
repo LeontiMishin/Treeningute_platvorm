@@ -32,6 +32,9 @@ export type Video = {
   shortDescription: string | null;
   trainerId: number | null;
   categoryId: number | null;
+  accessTier?: string;
+  publishedAt?: string | null;
+  isFeatured?: boolean;
   trainer?: Trainer | null;
   category?: Category | null;
 };
