@@ -24,17 +24,19 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-
   const user = await prisma.user.create({
     data: {
       name,
       email,
       passwordHash,
+      roleCode: "USER",
+      accountStatus: "ACTIVE",
+      preferredLanguage: "et",
     },
     select: publicUserSelect,
   });
 
-  const role = resolveUserRole(user.email);
+  const role = resolveUserRole(user.email, user.roleCode);
   const token = createAccessToken({
     id: user.userId,
     email: user.email,
@@ -71,7 +73,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const token = createAccessToken({
     id: user.userId,
     email: user.email,
-    role: resolveUserRole(user.email),
+    role: resolveUserRole(user.email, user.roleCode),
   });
 
   res.status(200).json({

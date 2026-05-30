@@ -20,6 +20,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       select: {
         userId: true,
         email: true,
+        roleCode: true,
       },
     });
 
@@ -30,7 +31,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     req.user = {
       id: user.userId,
       email: user.email,
-      role: resolveUserRole(user.email),
+      role: resolveUserRole(user.email, user.roleCode),
     };
 
     next();

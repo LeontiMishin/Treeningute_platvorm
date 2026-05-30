@@ -5,4 +5,7 @@ export const publicUserSelect = {
   name: true,
   email: true,
   registerDate: true,
+  roleCode: true,
+  accountStatus: true,
+  preferredLanguage: true,
 } satisfies Prisma.UserSelect;

@@ -13,6 +13,12 @@ const subscriptionInclude = {
   },
 };
 
+function addMonths(startDate: Date, months: number) {
+  const nextDate = new Date(startDate);
+  nextDate.setMonth(nextDate.getMonth() + months);
+  return nextDate;
+}
+
 export const listSubscriptions = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
     throw new ApiError(401, "Authentication is required.");
@@ -71,6 +77,8 @@ export const createSubscription = asyncHandler(async (req: Request, res: Respons
     planId: number;
     userId?: number;
     startDate?: Date;
+    autoRenew?: boolean;
+    paymentMethod?: string;
   };
 
   const targetUserId =
@@ -84,12 +92,60 @@ export const createSubscription = asyncHandler(async (req: Request, res: Respons
     throw new ApiError(404, "Subscription plan not found.");
   }
 
-  const subscription = await prisma.userSubscription.create({
-    data: {
-      userId: targetUserId,
-      planId: body.planId,
-      startDate: body.startDate,
-    },
+  const startDate = body.startDate ?? new Date();
+  let subscriptionId: number | undefined;
+
+  try {
+    const createdRows = await prisma.$queryRaw<Array<{ subscription_id: number }>>`
+      SELECT public.sp_create_subscription(
+        ${targetUserId}::integer,
+        ${body.planId}::integer,
+        ${startDate}::timestamptz,
+        ${body.autoRenew ?? false}::boolean
+      ) AS subscription_id
+    `;
+
+    const rawSubscriptionId = createdRows[0]?.subscription_id;
+    subscriptionId = rawSubscriptionId ? Number(rawSubscriptionId) : undefined;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+
+    if (!message.includes("sp_create_subscription")) {
+      throw error;
+    }
+
+    const fallbackSubscription = await prisma.$transaction(async (transaction) => {
+      await transaction.userSubscription.updateMany({
+        where: {
+          userId: targetUserId,
+          status: "ACTIVE",
+        },
+        data: {
+          status: "SUPERSEDED",
+          autoRenew: false,
+        },
+      });
+
+      return transaction.userSubscription.create({
+        data: {
+          userId: targetUserId,
+          planId: body.planId,
+          startDate,
+          endDate: addMonths(startDate, subscriptionPlan.durationMonths),
+          autoRenew: body.autoRenew ?? false,
+          status: "ACTIVE",
+        },
+        select: {
+          userSubscriptionId: true,
+        },
+      });
+    });
+
+    subscriptionId = fallbackSubscription.userSubscriptionId;
+  }
+
+  const subscription = await prisma.userSubscription.findUniqueOrThrow({
+    where: { userSubscriptionId: subscriptionId },
     include: subscriptionInclude,
   });
 
@@ -122,10 +178,15 @@ export const updateSubscription = asyncHandler(async (req: Request, res: Respons
     planId?: number;
     userId?: number;
     startDate?: Date;
+    endDate?: Date;
+    status?: string;
+    autoRenew?: boolean;
   };
 
+  let nextPlan = null;
+
   if (body.planId) {
-    const nextPlan = await prisma.subscriptionPlan.findUnique({
+    nextPlan = await prisma.subscriptionPlan.findUnique({
       where: { planId: body.planId },
     });
 
@@ -142,6 +203,19 @@ export const updateSubscription = asyncHandler(async (req: Request, res: Respons
         ? { userId: body.userId }
         : {}),
       ...(body.startDate ? { startDate: body.startDate } : {}),
+      ...(body.endDate ? { endDate: body.endDate } : {}),
+      ...(body.status ? { status: body.status } : {}),
+      ...(body.autoRenew !== undefined ? { autoRenew: body.autoRenew } : {}),
+      ...(body.planId && nextPlan && !body.endDate
+        ? {
+            endDate: new Date(
+              new Date(body.startDate ?? existingSubscription.startDate ?? new Date()).setMonth(
+                new Date(body.startDate ?? existingSubscription.startDate ?? new Date()).getMonth() +
+                  nextPlan.durationMonths,
+              ),
+            ),
+          }
+        : {}),
     },
     include: subscriptionInclude,
   });

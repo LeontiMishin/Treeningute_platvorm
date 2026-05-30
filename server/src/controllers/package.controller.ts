@@ -32,7 +32,11 @@ export const getPackageById = asyncHandler(async (req: Request, res: Response) =
 
 export const createPackage = asyncHandler(async (req: Request, res: Response) => {
   const subscriptionPackage = await prisma.subscriptionPlan.create({
-    data: req.body,
+    data: {
+      ...req.body,
+      accessTier: req.body.accessTier ?? "STARTER",
+      isActive: req.body.isActive ?? true,
+    },
   });
 
   res.status(201).json(subscriptionPackage);

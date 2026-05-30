@@ -146,6 +146,7 @@ export const swaggerSpec = {
     { name: "Packages" },
     { name: "Playlists" },
     { name: "Subscriptions" },
+    { name: "Reports" },
   ],
   paths: {
     "/health": {
@@ -232,6 +233,100 @@ export const swaggerSpec = {
     ...buildCrudPaths("Packages", "Package", "/api/packages", "PackageRequest"),
     ...buildCrudPaths("Playlists", "Playlist", "/api/playlists", "PlaylistRequest"),
     ...buildCrudPaths("Subscriptions", "Subscription", "/api/subscriptions", "SubscriptionRequest"),
+    "/api/reports/member/access": {
+      get: {
+        tags: ["Reports"],
+        security: [{ bearerAuth: [] }],
+        summary: "Get current member access overview view",
+        responses: {
+          200: {
+            description: "Access overview loaded",
+          },
+        },
+      },
+    },
+    "/api/reports/member/progress": {
+      get: {
+        tags: ["Reports"],
+        security: [{ bearerAuth: [] }],
+        summary: "Get current member progress snapshot view",
+        responses: {
+          200: {
+            description: "Progress snapshot loaded",
+          },
+        },
+      },
+    },
+    "/api/reports/member/completions": {
+      post: {
+        tags: ["Reports"],
+        security: [{ bearerAuth: [] }],
+        summary: "Mark a workout as completed with the database procedure",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                $ref: "#/components/schemas/WorkoutCompletionRequest",
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Workout completion stored",
+          },
+        },
+      },
+    },
+    "/api/reports/trainer/programs": {
+      get: {
+        tags: ["Reports"],
+        security: [{ bearerAuth: [] }],
+        summary: "Get trainer program overview view",
+        responses: {
+          200: {
+            description: "Trainer program overview loaded",
+          },
+        },
+      },
+    },
+    "/api/reports/trainer/videos": {
+      get: {
+        tags: ["Reports"],
+        security: [{ bearerAuth: [] }],
+        summary: "Get trainer video catalog view",
+        responses: {
+          200: {
+            description: "Trainer video catalog loaded",
+          },
+        },
+      },
+    },
+    "/api/reports/admin/revenue": {
+      get: {
+        tags: ["Reports"],
+        security: [{ bearerAuth: [] }],
+        summary: "Get admin revenue summary view",
+        responses: {
+          200: {
+            description: "Revenue summary loaded",
+          },
+        },
+      },
+    },
+    "/api/reports/admin/content-quality": {
+      get: {
+        tags: ["Reports"],
+        security: [{ bearerAuth: [] }],
+        summary: "Get admin content quality view",
+        responses: {
+          200: {
+            description: "Content quality summary loaded",
+          },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -265,6 +360,9 @@ export const swaggerSpec = {
           name: { type: "string" },
           email: { type: "string", format: "email" },
           password: { type: "string", minLength: 6 },
+          preferredLanguage: { type: "string" },
+          accountStatus: { type: "string" },
+          roleCode: { type: "string" },
         },
       },
       CategoryRequest: {
@@ -292,6 +390,9 @@ export const swaggerSpec = {
           shortDescription: { type: "string" },
           trainerId: { type: "integer" },
           categoryId: { type: "integer" },
+          difficultyLevelId: { type: "integer" },
+          accessTier: { type: "string" },
+          isFeatured: { type: "boolean" },
         },
       },
       PackageRequest: {
@@ -300,6 +401,9 @@ export const swaggerSpec = {
           planName: { type: "string" },
           price: { type: "number" },
           durationMonths: { type: "integer" },
+          accessTier: { type: "string" },
+          isActive: { type: "boolean" },
+          maxActivePrograms: { type: "integer" },
         },
       },
       PlaylistRequest: {
@@ -320,6 +424,18 @@ export const swaggerSpec = {
           planId: { type: "integer" },
           userId: { type: "integer" },
           startDate: { type: "string", format: "date-time" },
+          autoRenew: { type: "boolean" },
+          paymentMethod: { type: "string" },
+        },
+      },
+      WorkoutCompletionRequest: {
+        type: "object",
+        required: ["videoId"],
+        properties: {
+          videoId: { type: "integer" },
+          secondsWatched: { type: "integer" },
+          rating: { type: "integer", minimum: 1, maximum: 5 },
+          note: { type: "string" },
         },
       },
     },

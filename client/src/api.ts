@@ -238,7 +238,7 @@ export const api = {
     list() {
       return request<UserSubscription[]>("/subscriptions");
     },
-    create(payload: { planId: number; userId?: number; startDate?: string }) {
+    create(payload: { planId: number; userId?: number; startDate?: string; autoRenew?: boolean }) {
       return request<UserSubscription>("/subscriptions", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -254,7 +254,16 @@ export const api = {
     list() {
       return request<User[]>("/users");
     },
-    update(id: number, payload: { name?: string; email?: string; password?: string }) {
+    update(
+      id: number,
+      payload: {
+        name?: string;
+        email?: string;
+        password?: string;
+        roleCode?: string;
+        accountStatus?: string;
+      },
+    ) {
       return request<User>(`/users/${id}`, {
         method: "PATCH",
         body: JSON.stringify(payload),

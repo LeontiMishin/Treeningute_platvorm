@@ -6,6 +6,8 @@ export type User = {
   email: string;
   registerDate: string | null;
   role: UserRole;
+  accountStatus?: string;
+  preferredLanguage?: string | null;
 };
 
 export type Category = {
@@ -18,6 +20,9 @@ export type Trainer = {
   trainerName: string;
   bio: string | null;
   startDate: string | null;
+  headline?: string | null;
+  yearsExperience?: number | null;
+  user?: User | null;
 };
 
 export type Video = {
@@ -30,6 +35,9 @@ export type Video = {
   shortDescription: string | null;
   trainerId: number | null;
   categoryId: number | null;
+  accessTier?: string;
+  publishedAt?: string | null;
+  isFeatured?: boolean;
   trainer?: Trainer | null;
   category?: Category | null;
 };
@@ -39,6 +47,9 @@ export type SubscriptionPlan = {
   planName: string;
   price: number | string;
   durationMonths: number;
+  accessTier?: string;
+  isActive?: boolean;
+  maxActivePrograms?: number | null;
 };
 
 export type PlaylistVideo = {
@@ -58,6 +69,9 @@ export type Playlist = {
 export type UserSubscription = {
   userSubscriptionId: number;
   startDate: string | null;
+  endDate?: string | null;
+  status?: string;
+  autoRenew?: boolean;
   userId: number | null;
   planId: number | null;
   plan?: SubscriptionPlan | null;
@@ -75,4 +89,3 @@ export type VideoQuery = {
   categoryId?: number;
   search?: string;
 };
-

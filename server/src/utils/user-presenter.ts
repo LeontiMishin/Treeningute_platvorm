@@ -5,6 +5,9 @@ type UserLike = {
   name: string;
   email: string;
   registerDate: Date | null;
+  roleCode?: string | null;
+  accountStatus?: string | null;
+  preferredLanguage?: string | null;
 };
 
 export function toPublicUser(user: UserLike) {
@@ -13,6 +16,8 @@ export function toPublicUser(user: UserLike) {
     name: user.name,
     email: user.email,
     registerDate: user.registerDate,
-    role: resolveUserRole(user.email),
+    role: resolveUserRole(user.email, user.roleCode),
+    accountStatus: user.accountStatus ?? "ACTIVE",
+    preferredLanguage: user.preferredLanguage ?? null,
   };
 }
