@@ -39,7 +39,7 @@ import type {
   UserFormState,
   VideoFormState,
 } from "./appTypes";
-import { Field, SectionHeader, StatCard } from "./components/Common";
+import { ConfirmDialog, Field, SectionHeader, StatCard, ToastBanner } from "./components/Common";
 import type {
   Category,
   Playlist,
@@ -52,6 +52,14 @@ import type {
 import { AdminPanel } from "./components/AdminPanel";
 
 function App() {
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    text: string;
+    confirmLabel: string;
+    cancelLabel: string;
+    danger?: boolean;
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
   const [language, setLanguage] = useState<Language>(() => {
     const saved = window.localStorage.getItem("trainflow_language");
     return saved === "en" || saved === "et" ? saved : "et";
@@ -73,9 +81,7 @@ function App() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [selectedVideoIds, setSelectedVideoIds] = useState<number[]>([]);
   const [activePlaylistId, setActivePlaylistId] = useState<number | null>(null);
-  const [playlistNameEdits, setPlaylistNameEdits] = useState<Record<number, string>>({});
   const [authForm, setAuthForm] = useState({
     name: "",
     email: "",
@@ -104,6 +110,14 @@ function App() {
 
   const t = copy[language];
   const isAdmin = user?.role === "ADMIN";
+  const currentTrainer = user
+    ? trainers.find((trainer) => trainer.user?.userId === user.userId) ?? null
+    : null;
+  const isTrainer = Boolean(currentTrainer) && !isAdmin;
+  const currentRoleLabel = isAdmin ? t.roleAdmin : isTrainer ? t.roleTrainer : t.roleUser;
+  const currentTrainerVideos = currentTrainer
+    ? videos.filter((video) => video.trainerId === currentTrainer.trainerId)
+    : [];
   const activePlaylist = playlists.find((playlist) => playlist.playlistId === activePlaylistId) ?? null;
   const userSubscriptions = user
     ? subscriptions.filter(
@@ -187,6 +201,15 @@ function App() {
   }, [currentPageLabel, language, t.brand]);
 
   useEffect(() => {
+    if (!banner) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setBanner(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [banner]);
+
+  useEffect(() => {
     const savedToken = getStoredToken();
 
     if (!savedToken) {
@@ -215,12 +238,6 @@ function App() {
       setActivePlaylistId(playlists[0].playlistId);
     }
   }, [activePlaylistId, playlists]);
-
-  useEffect(() => {
-    setPlaylistNameEdits(
-      Object.fromEntries(playlists.map((playlist) => [playlist.playlistId, playlist.playlistName])),
-    );
-  }, [playlists]);
 
   useEffect(() => {
     if (!isAdmin && currentPage === "admin") {
@@ -343,7 +360,6 @@ function App() {
     setPlaylists([]);
     setSubscriptions([]);
     setUsers([]);
-    setSelectedVideoIds([]);
     setActivePlaylistId(null);
     setActiveVideo(null);
     setCurrentPage("overview");
@@ -354,6 +370,20 @@ function App() {
         text: t.signedOut,
       });
     }
+  }
+
+  function openConfirmDialog(nextDialog: NonNullable<typeof confirmDialog>) {
+    setConfirmDialog(nextDialog);
+  }
+
+  async function runConfirmedAction() {
+    if (!confirmDialog) {
+      return;
+    }
+
+    const action = confirmDialog.onConfirm;
+    setConfirmDialog(null);
+    await action();
   }
 
   async function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
@@ -417,32 +447,6 @@ function App() {
     });
   }
 
-  function toggleSelectedVideo(videoId: number) {
-    const video = videos.find((entry) => entry.videoId === videoId);
-
-    if (video && !canAccessTier(currentAccessTier, getVideoAccessTier(video))) {
-      setBanner({
-        type: "error",
-        text: `${t.unlockThisVideo}: ${getAccessTierLabel(getVideoAccessTier(video), t)}`,
-      });
-      return;
-    }
-
-    setSelectedVideoIds((current) =>
-      current.includes(videoId)
-        ? current.filter((id) => id !== videoId)
-        : [...current, videoId],
-    );
-  }
-
-  function videoIsInActivePlaylist(videoId: number) {
-    if (!activePlaylist) {
-      return false;
-    }
-
-    return activePlaylist.playlistVideos.some((entry) => entry.videoId === videoId);
-  }
-
   async function handleCreatePlaylist() {
     if (!newPlaylistName.trim()) {
       setBanner({
@@ -453,14 +457,13 @@ function App() {
     }
 
     try {
-      await api.playlists.create({
+      const createdPlaylist = await api.playlists.create({
         playlistName: newPlaylistName.trim(),
-        videoIds: selectedVideoIds,
       });
       setNewPlaylistName("");
-      setSelectedVideoIds([]);
       const nextPlaylists = await api.playlists.list();
       setPlaylists(nextPlaylists);
+      setActivePlaylistId(createdPlaylist.playlistId);
       setBanner({
         type: "success",
         text: "Playlist created successfully.",
@@ -473,92 +476,39 @@ function App() {
     }
   }
 
-  async function handleRenamePlaylist(playlistId: number) {
-    const playlistName = playlistNameEdits[playlistId]?.trim();
+  async function handleAddVideoToPlaylist(videoId: number) {
+    const playlist = activePlaylist;
 
-    if (!playlistName) {
+    if (!playlist) {
       setBanner({
         type: "error",
-        text: "Playlist name is required.",
+        text: t.choosePlaylistFirst,
       });
       return;
     }
 
-    try {
-      const playlist = playlists.find((entry) => entry.playlistId === playlistId);
-      await api.playlists.update(playlistId, {
-        playlistName,
-        videoIds:
-          playlist?.playlistVideos
-            .map((entry) => entry.videoId)
-            .filter((videoId): videoId is number => typeof videoId === "number") ?? [],
-      });
-      setPlaylists(await api.playlists.list());
-      setBanner({
-        type: "success",
-        text: "Playlist updated successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Playlist update failed.",
-      });
-    }
-  }
-
-  async function handleDeletePlaylist(playlistId: number) {
-    try {
-      await api.playlists.delete(playlistId);
-      setPlaylists(await api.playlists.list());
-      setBanner({
-        type: "success",
-        text: "Playlist deleted successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Playlist deletion failed.",
-      });
-    }
-  }
-
-  async function handleToggleVideoInPlaylist(videoId: number) {
-    const video = videos.find((entry) => entry.videoId === videoId);
-
-    if (video && !canAccessTier(currentAccessTier, getVideoAccessTier(video))) {
-      setBanner({
-        type: "error",
-        text: `${t.unlockThisVideo}: ${getAccessTierLabel(getVideoAccessTier(video), t)}`,
-      });
-      setCurrentPage("membership");
-      return;
-    }
-
-    if (!activePlaylist) {
-      setBanner({
-        type: "error",
-        text: "Create or choose a playlist first.",
-      });
-      return;
-    }
-
-    const currentVideoIds = activePlaylist.playlistVideos
+    const currentVideoIds = playlist.playlistVideos
       .map((entry) => entry.videoId)
       .filter((id): id is number => typeof id === "number");
 
-    const nextVideoIds = currentVideoIds.includes(videoId)
-      ? currentVideoIds.filter((id) => id !== videoId)
-      : [...currentVideoIds, videoId];
+    if (currentVideoIds.includes(videoId)) {
+      setBanner({
+        type: "error",
+        text: "This video is already in the selected playlist.",
+      });
+      return;
+    }
 
     try {
-      await api.playlists.update(activePlaylist.playlistId, {
-        playlistName: activePlaylist.playlistName,
-        videoIds: nextVideoIds,
+      await api.playlists.update(playlist.playlistId, {
+        playlistName: playlist.playlistName,
+        videoIds: [...currentVideoIds, videoId],
       });
       setPlaylists(await api.playlists.list());
+      setActivePlaylistId(playlist.playlistId);
       setBanner({
         type: "success",
-        text: "Playlist contents updated.",
+        text: "Video added to playlist.",
       });
     } catch (error) {
       setBanner({
@@ -566,6 +516,34 @@ function App() {
         text: error instanceof Error ? error.message : "Playlist sync failed.",
       });
     }
+  }
+
+  async function handleDeletePlaylist(playlistId: number) {
+    const playlist = playlists.find((entry) => entry.playlistId === playlistId);
+
+    openConfirmDialog({
+      title: "Delete playlist?",
+      text: playlist
+        ? `Remove "${playlist.playlistName}" and all its saved links?`
+        : "Remove this playlist and all its saved links?",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.playlists.delete(playlistId);
+          setPlaylists(await api.playlists.list());
+          setBanner({
+            type: "success",
+            text: "Playlist deleted successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Playlist deletion failed.",
+          });
+        }
+      },
+    });
   }
 
   async function handleRemoveVideoFromPlaylist(playlist: Playlist, videoId: number) {
@@ -573,22 +551,30 @@ function App() {
       .map((entry) => entry.videoId)
       .filter((id): id is number => typeof id === "number" && id !== videoId);
 
-    try {
-      await api.playlists.update(playlist.playlistId, {
-        playlistName: playlist.playlistName,
-        videoIds: nextVideoIds,
-      });
-      setPlaylists(await api.playlists.list());
-      setBanner({
-        type: "success",
-        text: "Playlist contents updated.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Playlist sync failed.",
-      });
-    }
+    openConfirmDialog({
+      title: "Remove video from playlist?",
+      text: "This will update the playlist immediately and the video will no longer appear in the collection.",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.playlists.update(playlist.playlistId, {
+            playlistName: playlist.playlistName,
+            videoIds: nextVideoIds,
+          });
+          setPlaylists(await api.playlists.list());
+          setBanner({
+            type: "success",
+            text: "Playlist contents updated.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Playlist sync failed.",
+          });
+        }
+      },
+    });
   }
 
   async function handleSubscribe(planId: number) {
@@ -621,19 +607,27 @@ function App() {
   }
 
   async function handleDeleteSubscription(subscriptionId: number) {
-    try {
-      await api.subscriptions.delete(subscriptionId);
-      setSubscriptions(await api.subscriptions.list());
-      setBanner({
-        type: "success",
-        text: "Subscription removed successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Subscription removal failed.",
-      });
-    }
+    openConfirmDialog({
+      title: "Delete subscription?",
+      text: "This will remove the selected subscription from the account.",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.subscriptions.delete(subscriptionId);
+          setSubscriptions(await api.subscriptions.list());
+          setBanner({
+            type: "success",
+            text: "Subscription removed successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Subscription removal failed.",
+          });
+        }
+      },
+    });
   }
 
   function fillCategoryForm(category: Category) {
@@ -712,21 +706,30 @@ function App() {
   }
 
   async function handleDeleteCategory(categoryId: number) {
-    try {
-      await api.categories.delete(categoryId);
-      setCategories(await api.categories.list());
-      setEditingCategoryId(null);
-      setCategoryForm(initialCategoryForm);
-      setBanner({
-        type: "success",
-        text: "Category deleted successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Category deletion failed.",
-      });
-    }
+    const category = categories.find((entry) => entry.categoryId === categoryId);
+    openConfirmDialog({
+      title: "Delete category?",
+      text: category ? `Remove "${category.categoryName}" from the library?` : "Remove this category from the library?",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.categories.delete(categoryId);
+          setCategories(await api.categories.list());
+          setEditingCategoryId(null);
+          setCategoryForm(initialCategoryForm);
+          setBanner({
+            type: "success",
+            text: "Category deleted successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Category deletion failed.",
+          });
+        }
+      },
+    });
   }
 
   async function handleSaveTrainer() {
@@ -759,21 +762,30 @@ function App() {
   }
 
   async function handleDeleteTrainer(trainerId: number) {
-    try {
-      await api.trainers.delete(trainerId);
-      setTrainers(await api.trainers.list());
-      setEditingTrainerId(null);
-      setTrainerForm(initialTrainerForm);
-      setBanner({
-        type: "success",
-        text: "Trainer deleted successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Trainer deletion failed.",
-      });
-    }
+    const trainer = trainers.find((entry) => entry.trainerId === trainerId);
+    openConfirmDialog({
+      title: "Delete trainer?",
+      text: trainer ? `Remove "${trainer.trainerName}" from the studio?` : "Remove this trainer from the studio?",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.trainers.delete(trainerId);
+          setTrainers(await api.trainers.list());
+          setEditingTrainerId(null);
+          setTrainerForm(initialTrainerForm);
+          setBanner({
+            type: "success",
+            text: "Trainer deleted successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Trainer deletion failed.",
+          });
+        }
+      },
+    });
   }
 
   async function handleSavePackage() {
@@ -806,21 +818,30 @@ function App() {
   }
 
   async function handleDeletePackage(planId: number) {
-    try {
-      await api.packages.delete(planId);
-      setPackages(await api.packages.list());
-      setEditingPackageId(null);
-      setPackageForm(initialPackageForm);
-      setBanner({
-        type: "success",
-        text: "Package deleted successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Package deletion failed.",
-      });
-    }
+    const plan = packages.find((entry) => entry.planId === planId);
+    openConfirmDialog({
+      title: "Delete package?",
+      text: plan ? `Remove "${plan.planName}" and its access rule?` : "Remove this package and its access rule?",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.packages.delete(planId);
+          setPackages(await api.packages.list());
+          setEditingPackageId(null);
+          setPackageForm(initialPackageForm);
+          setBanner({
+            type: "success",
+            text: "Package deleted successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Package deletion failed.",
+          });
+        }
+      },
+    });
   }
 
   async function handleSaveVideo() {
@@ -858,21 +879,30 @@ function App() {
   }
 
   async function handleDeleteVideo(videoId: number) {
-    try {
-      await api.videos.delete(videoId);
-      await loadVideos();
-      setEditingVideoId(null);
-      setVideoForm(initialVideoForm);
-      setBanner({
-        type: "success",
-        text: "Video deleted successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Video deletion failed.",
-      });
-    }
+    const video = videos.find((entry) => entry.videoId === videoId);
+    openConfirmDialog({
+      title: "Delete video?",
+      text: video ? `Remove "${video.title}" from the library?` : "Remove this video from the library?",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.videos.delete(videoId);
+          await loadVideos();
+          setEditingVideoId(null);
+          setVideoForm(initialVideoForm);
+          setBanner({
+            type: "success",
+            text: "Video deleted successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Video deletion failed.",
+          });
+        }
+      },
+    });
   }
 
   async function handleSaveUser() {
@@ -919,28 +949,41 @@ function App() {
       return;
     }
 
-    try {
-      await api.subscriptions.create({
-        userId: editingUserId,
-        planId: Number(userForm.subscriptionPlanId),
-        autoRenew: userForm.autoRenew,
-      });
-      setSubscriptions(await api.subscriptions.list());
-      setUserForm((current) => ({
-        ...current,
-        subscriptionPlanId: "",
-        autoRenew: false,
-      }));
-      setBanner({
-        type: "success",
-        text: "Subscription added successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "Subscription assignment failed.",
-      });
-    }
+    const plan = packages.find((entry) => entry.planId === Number(userForm.subscriptionPlanId));
+
+    openConfirmDialog({
+      title: "Assign subscription?",
+      text: plan
+        ? `Add "${plan.planName}" to ${users.find((listedUser) => listedUser.userId === editingUserId)?.name ?? "this user"}?`
+        : "Add the selected subscription to this user?",
+      confirmLabel: t.assignPlan,
+      cancelLabel: t.cancel,
+      danger: false,
+      onConfirm: async () => {
+        try {
+          await api.subscriptions.create({
+            userId: editingUserId,
+            planId: Number(userForm.subscriptionPlanId),
+            autoRenew: userForm.autoRenew,
+          });
+          setSubscriptions(await api.subscriptions.list());
+          setUserForm((current) => ({
+            ...current,
+            subscriptionPlanId: "",
+            autoRenew: false,
+          }));
+          setBanner({
+            type: "success",
+            text: "Subscription added successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "Subscription assignment failed.",
+          });
+        }
+      },
+    });
   }
 
   async function handleDeleteUser(userId: number) {
@@ -952,21 +995,32 @@ function App() {
       return;
     }
 
-    try {
-      await api.users.delete(userId);
-      setUsers(await api.users.list());
-      setEditingUserId(null);
-      setUserForm(initialUserForm);
-      setBanner({
-        type: "success",
-        text: "User deleted successfully.",
-      });
-    } catch (error) {
-      setBanner({
-        type: "error",
-        text: error instanceof Error ? error.message : "User deletion failed.",
-      });
-    }
+    const listedUser = users.find((entry) => entry.userId === userId);
+    openConfirmDialog({
+      title: "Delete user?",
+      text: listedUser
+        ? `Remove "${listedUser.name}" and all related access records?`
+        : "Remove this user and all related access records?",
+      confirmLabel: t.delete,
+      cancelLabel: t.cancel,
+      onConfirm: async () => {
+        try {
+          await api.users.delete(userId);
+          setUsers(await api.users.list());
+          setEditingUserId(null);
+          setUserForm(initialUserForm);
+          setBanner({
+            type: "success",
+            text: "User deleted successfully.",
+          });
+        } catch (error) {
+          setBanner({
+            type: "error",
+            text: error instanceof Error ? error.message : "User deletion failed.",
+          });
+        }
+      },
+    });
   }
 
   function resetAdminEditor(section = adminSection) {
@@ -1125,21 +1179,50 @@ function App() {
             </div>
 
             {user ? (
-              <div className="hero-member-chip">
-                <span>{t.accessLabel}</span>
-                <strong>{getAccessTierLabel(currentAccessTier, t)}</strong>
-              </div>
-            ) : null}
+              <>
+                <div className="hero-member-chip">
+                  <span>{t.accessLabel}</span>
+                  <strong>{getAccessTierLabel(currentAccessTier, t)}</strong>
+                </div>
 
-            <div className="stat-grid">
-              <StatCard label={t.availableNow} value={availableVideosCount} />
-              <StatCard label={t.statsVideos} value={videos.length} />
-              <StatCard label={t.statsTrainers} value={trainers.length} />
-              <StatCard label={t.statsCategories} value={categories.length} />
-              <StatCard label={t.statsPackages} value={packages.length} />
-              <StatCard label={t.statsPlaylists} value={playlists.length} />
-              <StatCard label={t.statsSubscriptions} value={userSubscriptions.length} />
-            </div>
+                <div className="stat-grid">
+                  <StatCard label={t.availableNow} value={availableVideosCount} />
+                  <StatCard label={t.statsVideos} value={videos.length} />
+                  <StatCard label={t.statsTrainers} value={trainers.length} />
+                  <StatCard label={t.statsCategories} value={categories.length} />
+                  <StatCard label={t.statsPackages} value={packages.length} />
+                  <StatCard label={t.statsPlaylists} value={playlists.length} />
+                  <StatCard label={t.statsSubscriptions} value={userSubscriptions.length} />
+                </div>
+
+                {isTrainer ? (
+                  <article className="highlight-card trainer-highlight">
+                    <span>{t.trainerDashboard}</span>
+                    <strong>{currentTrainer?.trainerName ?? t.roleTrainer}</strong>
+                    <p>{t.trainerDashboardText}</p>
+                    <div className="row-meta">
+                      <span>
+                        {currentTrainerVideos.length} {t.statsVideos.toLowerCase()}
+                      </span>
+                    </div>
+                    <div className="mini-list">
+                      {currentTrainerVideos.slice(0, 3).map((video) => (
+                        <div className="mini-list-row" key={video.videoId}>
+                          <strong>{video.title}</strong>
+                          <span>{video.category?.categoryName ?? t.noCategory}</span>
+                        </div>
+                      ))}
+                      {currentTrainerVideos.length === 0 ? (
+                        <div className="mini-list-row">
+                          <strong>{t.noVideos}</strong>
+                          <span>{t.sessionDetailsSoon}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </article>
+                ) : null}
+              </>
+            ) : null}
           </div>
 
           <aside className="auth-card">
@@ -1159,7 +1242,7 @@ function App() {
               <div className="profile-summary">
                 <div className="profile-chip">
                   <strong>{user.name}</strong>
-                  <span>{user.role === "ADMIN" ? t.roleAdmin : t.roleUser}</span>
+                  <span>{currentRoleLabel}</span>
                 </div>
                 <div className="profile-meta">
                   <p>{user.email}</p>
@@ -1240,11 +1323,7 @@ function App() {
         </section>
         ) : null}
 
-        {banner && currentPage !== "overview" ? (
-          <div className={banner.type === "success" ? "banner success page-banner" : "banner error page-banner"}>
-            {banner.text}
-          </div>
-        ) : null}
+        <ToastBanner banner={banner} />
 
         {!user ? (
           <section className="content-panel">
@@ -1404,12 +1483,35 @@ function App() {
 
             {loadingVideos ? <p className="muted-text">Loading videos…</p> : null}
 
+            <div className="library-playlist-picker">
+              <Field label={t.choosePlaylist}>
+                <select
+                  value={activePlaylistId ?? ""}
+                  onChange={(event) => setActivePlaylistId(Number(event.target.value) || null)}
+                >
+                  <option value="">-</option>
+                  {playlists.map((playlist) => (
+                    <option key={playlist.playlistId} value={playlist.playlistId}>
+                      {playlist.playlistName}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <p className="muted-text">
+                {activePlaylist
+                  ? `${activePlaylist.playlistName} · ${activePlaylist.playlistVideos.length} videos`
+                  : t.choosePlaylistFirst}
+              </p>
+            </div>
+
             <div className="video-grid">
               {videos.length ? (
                 videos.map((video) => {
                   const requiredTier = getVideoAccessTier(video);
                   const unlocked = isAdmin || canAccessTier(currentAccessTier, requiredTier);
                   const thumbnailUrl = getYouTubeThumbnail(video.videoURL);
+                  const inPlaylist =
+                    activePlaylist?.playlistVideos.some((entry) => entry.videoId === video.videoId) ?? false;
 
                   return (
                     <article className={unlocked ? "video-card" : "video-card locked"} key={video.videoId}>
@@ -1443,21 +1545,19 @@ function App() {
                         <span>{video.equipment ?? t.noEquipment}</span>
                       </div>
                       <div className="video-actions">
-                        <label className={unlocked ? "checkbox-chip" : "checkbox-chip disabled"}>
-                          <input
-                            checked={selectedVideoIds.includes(video.videoId)}
-                            disabled={!unlocked}
-                            type="checkbox"
-                            onChange={() => toggleSelectedVideo(video.videoId)}
-                          />
-                          <span>{t.selectedVideos}</span>
-                        </label>
                         {unlocked ? (
                           <>
-                            <button className="small-action" type="button" onClick={() => handleToggleVideoInPlaylist(video.videoId)}>
-                              {videoIsInActivePlaylist(video.videoId)
-                                ? t.removeFromPlaylist
-                                : t.addToPlaylist}
+                            <button
+                              className="small-action"
+                              disabled={inPlaylist}
+                              type="button"
+                              onClick={() => void handleAddVideoToPlaylist(video.videoId)}
+                            >
+                              {inPlaylist
+                                ? t.addedToPlaylist
+                                : activePlaylist
+                                  ? t.addToPlaylist
+                                  : t.choosePlaylist}
                             </button>
                             {video.videoURL ? (
                               <button
@@ -1504,99 +1604,102 @@ function App() {
               text={t.playlistsText}
             />
 
-            <div className="split-grid">
-              <article className="data-card">
-                <Field label={t.playlistName}>
-                  <input
-                    type="text"
-                    value={newPlaylistName}
-                    onChange={(event) => setNewPlaylistName(event.target.value)}
-                  />
-                </Field>
-                <div className="selection-box">
-                  <span>{t.selectedVideos}</span>
-                  <p>
-                    {selectedVideoIds.length
-                      ? selectedVideoIds
-                          .map((videoId) => videos.find((video) => video.videoId === videoId)?.title ?? String(videoId))
-                          .join(", ")
-                      : t.emptySelection}
-                  </p>
-                </div>
-                <button className="primary-button wide" type="button" onClick={handleCreatePlaylist}>
-                  {t.createPlaylist}
-                </button>
-              </article>
-
-              <article className="data-card">
-                <Field label={t.choosePlaylist}>
-                  <select
-                    value={activePlaylistId ?? ""}
-                    onChange={(event) => setActivePlaylistId(Number(event.target.value) || null)}
-                  >
-                    <option value="">—</option>
-                    {playlists.map((playlist) => (
-                      <option key={playlist.playlistId} value={playlist.playlistId}>
-                        {playlist.playlistName}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <p className="muted-text">{activePlaylist ? activePlaylist.playlistName : t.noPlaylists}</p>
-              </article>
+            <div className="playlist-create-bar">
+              <Field label={t.playlistName}>
+                <input
+                  type="text"
+                  value={newPlaylistName}
+                  onChange={(event) => setNewPlaylistName(event.target.value)}
+                />
+              </Field>
+              <button className="primary-button" type="button" onClick={handleCreatePlaylist}>
+                {t.createPlaylist}
+              </button>
             </div>
 
-            <div className="playlist-grid">
+            <div className="playlist-list-panel">
+              <span className="list-label">{t.playlistsTitle}</span>
               {playlists.length ? (
-                playlists.map((playlist) => (
-                  <article className="playlist-card" key={playlist.playlistId}>
-                    <Field label={t.renamePlaylist}>
-                      <input
-                        type="text"
-                        value={playlistNameEdits[playlist.playlistId] ?? playlist.playlistName}
-                        onChange={(event) =>
-                          setPlaylistNameEdits((current) => ({
-                            ...current,
-                            [playlist.playlistId]: event.target.value,
-                          }))
-                        }
-                      />
-                    </Field>
-                    <div className="card-actions">
-                      <button className="small-action" type="button" onClick={() => handleRenamePlaylist(playlist.playlistId)}>
-                        {t.save}
+                <div className="playlist-list">
+                  {playlists.map((playlist) => (
+                    <article
+                      className={activePlaylistId === playlist.playlistId ? "playlist-row active" : "playlist-row"}
+                      key={playlist.playlistId}
+                    >
+                      <button
+                        className="playlist-row-main"
+                        type="button"
+                        onClick={() => setActivePlaylistId(playlist.playlistId)}
+                      >
+                        <strong>{playlist.playlistName}</strong>
+                        <span>{playlist.playlistVideos.length} {t.statsVideos.toLowerCase()}</span>
                       </button>
-                      <button className="small-action danger" type="button" onClick={() => handleDeletePlaylist(playlist.playlistId)}>
+                      <button
+                        className="small-action danger"
+                        type="button"
+                        onClick={() => handleDeletePlaylist(playlist.playlistId)}
+                      >
                         {t.delete}
                       </button>
-                    </div>
-                    <div className="mini-list">
-                      <span className="list-label">{t.videosInPlaylist}</span>
-                      {playlist.playlistVideos.length ? (
-                        playlist.playlistVideos.map((entry) =>
-                          entry.video ? (
-                            <div className="mini-list-row" key={entry.playlistVideoId}>
-                              <strong>{entry.video.title}</strong>
-                              <button
-                                className="tiny-button"
-                                type="button"
-                                onClick={() => handleRemoveVideoFromPlaylist(playlist, entry.video!.videoId)}
-                              >
-                                {t.delete}
-                              </button>
-                            </div>
-                          ) : null,
-                        )
-                      ) : (
-                        <p className="muted-text">{t.noVideos}</p>
-                      )}
-                    </div>
-                  </article>
-                ))
+                    </article>
+                  ))}
+                </div>
               ) : (
                 <article className="empty-card">{t.noPlaylists}</article>
               )}
             </div>
+
+            <article className="data-card playlist-detail-card">
+              <div className="playlist-detail-header">
+                <div>
+                  <span className="section-eyebrow">{t.choosePlaylist}</span>
+                  <h3>{activePlaylist?.playlistName ?? t.noPlaylists}</h3>
+                  <p>
+                    {activePlaylist
+                      ? `${activePlaylist.playlistVideos.length} ${t.statsVideos.toLowerCase()}`
+                      : t.createOrChoosePlaylist}
+                  </p>
+                </div>
+              </div>
+              <div className="mini-list">
+                {activePlaylist?.playlistVideos.length ? (
+                  activePlaylist.playlistVideos.map((entry) =>
+                    entry.video ? (
+                      <article
+                        className="playlist-video-row"
+                        key={entry.playlistVideoId}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setActiveVideo(entry.video!)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setActiveVideo(entry.video!);
+                          }
+                        }}
+                      >
+                        <div className="playlist-video-copy">
+                          <strong>{entry.video.title}</strong>
+                          <span>{entry.video.category?.categoryName ?? t.noCategory}</span>
+                        </div>
+                        <button
+                          className="tiny-button danger"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleRemoveVideoFromPlaylist(activePlaylist, entry.video!.videoId);
+                          }}
+                        >
+                          {t.delete}
+                        </button>
+                      </article>
+                    ) : null,
+                  )
+                ) : (
+                  <p className="muted-text">{t.noVideos}</p>
+                )}
+              </div>
+            </article>
           </section>
         ) : null}
 
@@ -1642,89 +1745,113 @@ function App() {
               ))}
             </div>
 
-            <div className="split-grid membership-checkout-grid">
-              <article className="data-card checkout-card">
-                <SectionHeader
-                  eyebrow={t.simulatedCheckoutTitle}
-                  title={selectedPlan ? selectedPlan.planName : t.selectedPlan}
-                  text={t.simulatedCheckoutText}
-                />
-                <div className="selection-box">
-                  <span>{t.accessLabel}</span>
-                  <p>{getAccessTierLabel(currentAccessTier, t)}</p>
-                </div>
-                <div className="selection-box">
-                  <span>{t.packageIncludes}</span>
-                  <p>
-                    {selectedPlan
-                      ? getPlanHighlights(getPlanAccessTier(selectedPlan), language).join(" • ")
-                      : "—"}
-                  </p>
-                </div>
-                <Field label={t.paymentEmail}>
-                  <input
-                    type="text"
-                    value={paymentForm.email}
-                    onChange={(event) =>
-                      setPaymentForm((current) => ({ ...current, email: event.target.value }))
-                    }
-                  />
-                </Field>
-                <Field label={t.paymentCardholder}>
-                  <input
-                    type="text"
-                    value={paymentForm.cardholder}
-                    onChange={(event) =>
-                      setPaymentForm((current) => ({ ...current, cardholder: event.target.value }))
-                    }
-                  />
-                </Field>
-                <Field label={t.paymentCardNumber}>
-                  <input
-                    type="text"
-                    value={paymentForm.cardNumber}
-                    onChange={(event) =>
-                      setPaymentForm((current) => ({ ...current, cardNumber: event.target.value }))
-                    }
-                  />
-                </Field>
-                <button
-                  className="primary-button wide"
-                  disabled={!selectedPlan || paymentBusy}
-                  type="button"
-                  onClick={() => {
-                    if (selectedPlan) {
-                      void handleSubscribe(selectedPlan.planId);
-                    }
-                  }}
-                >
-                  {paymentBusy ? "..." : t.subscribe}
-                </button>
-                <p className="muted-text">{t.paymentHint}</p>
-              </article>
+            {selectedPlan ? (
+              <div
+                aria-modal="true"
+                className="checkout-modal-backdrop"
+                role="dialog"
+                onClick={() => setCheckoutPlanId(null)}
+              >
+                <article className="checkout-modal-card" onClick={(event) => event.stopPropagation()}>
+                  <div className="checkout-modal-header">
+                    <div>
+                      <span className="section-eyebrow">{t.simulatedCheckoutTitle}</span>
+                      <h3>{selectedPlan.planName}</h3>
+                      <p>{t.simulatedCheckoutText}</p>
+                    </div>
+                    <button className="small-action ghost" type="button" onClick={() => setCheckoutPlanId(null)}>
+                      {t.closeVideo}
+                    </button>
+                  </div>
 
-              <div className="subscription-list">
-                <span className="list-label">{t.activeSubscriptions}</span>
-                {userSubscriptions.length ? (
-                  userSubscriptions.map((subscription) => (
-                    <article className="subscription-card" key={subscription.userSubscriptionId}>
-                      <div>
-                        <strong>{subscription.plan?.planName ?? "Plan"}</strong>
-                        <p>{formatDate(subscription.startDate)}</p>
-                      </div>
-                      <button
-                        className="small-action danger"
-                        type="button"
-                        onClick={() => handleDeleteSubscription(subscription.userSubscriptionId)}
-                      >
-                        {t.delete}
-                      </button>
-                    </article>
-                  ))
-                ) : (
-                  <article className="empty-card">{t.noSubscriptions}</article>
-                )}
+                  <div className="checkout-preview">
+                    <div>
+                      <span>{t.accessLabel}</span>
+                      <strong>{getAccessTierLabel(getPlanAccessTier(selectedPlan), t)}</strong>
+                    </div>
+                    <div>
+                      <span>{t.price}</span>
+                      <strong>{formatPrice(selectedPlan.price)}</strong>
+                    </div>
+                  </div>
+
+                  <div className="checkout-card-visual">
+                    <span>{t.paymentCardNumber}</span>
+                    <strong>{paymentForm.cardNumber || "4242 4242 4242 4242"}</strong>
+                    <div className="row-meta">
+                      <span>{paymentForm.cardholder || user?.name || "FitNest User"}</span>
+                      <span>{paymentForm.email || user?.email || "member@fitnest.ee"}</span>
+                    </div>
+                  </div>
+
+                  <div className="checkout-form-grid">
+                    <Field label={t.paymentEmail}>
+                      <input
+                        type="email"
+                        value={paymentForm.email}
+                        onChange={(event) =>
+                          setPaymentForm((current) => ({ ...current, email: event.target.value }))
+                        }
+                      />
+                    </Field>
+                    <Field label={t.paymentCardholder}>
+                      <input
+                        type="text"
+                        value={paymentForm.cardholder}
+                        onChange={(event) =>
+                          setPaymentForm((current) => ({ ...current, cardholder: event.target.value }))
+                        }
+                      />
+                    </Field>
+                    <Field label={t.paymentCardNumber}>
+                      <input
+                        inputMode="numeric"
+                        placeholder="4242 4242 4242 4242"
+                        type="text"
+                        value={paymentForm.cardNumber}
+                        onChange={(event) =>
+                          setPaymentForm((current) => ({ ...current, cardNumber: event.target.value }))
+                        }
+                      />
+                    </Field>
+                  </div>
+
+                  <button
+                    className="primary-button wide"
+                    disabled={paymentBusy}
+                    type="button"
+                    onClick={() => {
+                      void handleSubscribe(selectedPlan.planId);
+                    }}
+                  >
+                    {paymentBusy ? "..." : t.subscribe}
+                  </button>
+                  <p className="muted-text">{t.paymentHint}</p>
+                </article>
               </div>
+            ) : null}
+
+            <div className="subscription-list">
+              <span className="list-label">{t.activeSubscriptions}</span>
+              {userSubscriptions.length ? (
+                userSubscriptions.map((subscription) => (
+                  <article className="subscription-card" key={subscription.userSubscriptionId}>
+                    <div>
+                      <strong>{subscription.plan?.planName ?? "Plan"}</strong>
+                      <p>{formatDate(subscription.startDate)}</p>
+                    </div>
+                    <button
+                      className="small-action danger"
+                      type="button"
+                      onClick={() => handleDeleteSubscription(subscription.userSubscriptionId)}
+                    >
+                      {t.delete}
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <article className="empty-card">{t.noSubscriptions}</article>
+              )}
             </div>
           </section>
         ) : null}
@@ -1826,6 +1953,17 @@ function App() {
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        cancelLabel={confirmDialog?.cancelLabel ?? t.cancel}
+        confirmLabel={confirmDialog?.confirmLabel ?? t.save}
+        danger={confirmDialog?.danger ?? true}
+        open={Boolean(confirmDialog)}
+        text={confirmDialog?.text ?? ""}
+        title={confirmDialog?.title ?? ""}
+        onCancel={() => setConfirmDialog(null)}
+        onConfirm={runConfirmedAction}
+      />
     </div>
   );
 }

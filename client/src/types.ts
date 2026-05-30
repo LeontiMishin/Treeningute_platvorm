@@ -20,6 +20,9 @@ export type Trainer = {
   trainerName: string;
   bio: string | null;
   startDate: string | null;
+  headline?: string | null;
+  yearsExperience?: number | null;
+  user?: User | null;
 };
 
 export type Video = {

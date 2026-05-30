@@ -321,7 +321,7 @@ export function AdminPanel({
         {adminSection === "packages" ? (
           <article className="admin-card">
             <h3>{t.packageManager}</h3>
-            <Field label={t.playlistName}>
+            <Field label={t.planName}>
               <input
                 type="text"
                 value={packageForm.planName}
